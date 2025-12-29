@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pharmacy Management System</title>
+    <script>if (!localStorage.getItem("accessToken")) { window.location.href = "login.html"; }</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <script src="js/api-utils.js"></script>
+</head>
+<body>
+    <div class="loader-wrapper" id="loader-wrapper">
+        <div class="loader"></div>
+    </div>
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div class="bg-dark text-white p-3 sidebar" id="sidebar-wrapper">
+            <div class="sidebar-heading text-center py-4 primary-text fs-4 fw-bold text-uppercase border-bottom">Pharmacy MS</div>
+            <div class="list-group list-group-flush my-3">
+                <a href="index.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold active" id="nav-dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
+                
+                <a href="inventory.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-inventory"><i class="fas fa-boxes me-2"></i>Inventory</a>
+                
+                <a href="sales.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-sales"><i class="fas fa-chart-line me-2"></i>Billing</a>
+
+                <a href="suppliers.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-suppliers"><i class="fas fa-truck me-2"></i>Suppliers</a>
+
+                <a href="employees.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-employees"><i class="fas fa-users me-2"></i>Employees</a>
+                
+                <a href="payroll.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-salaries"><i class="fas fa-wallet me-2"></i>Payroll</a>
+
+                <a href="expenses.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-expenses"><i class="fas fa-money-bill-wave me-2"></i>Expenses</a>
+                
+                <a href="reports.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-reports"><i class="fas fa-file-alt me-2"></i>Reports</a>
+                
+                <a href="shareholders.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-shareholders"><i class="fas fa-handshake me-2"></i>Shareholders</a>
+                
+                <a href="users.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-users"><i class="fas fa-user-circle me-2"></i>Users</a>
+
+                <a href="activity_logs.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-activity-logs"><i class="fas fa-history me-2"></i>Activity Logs</a>
+
+                <!-- User Profile Section -->
+                <div class="mt-auto p-3 border-top border-secondary">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="user-avatar-circle bg-primary text-white d-flex align-items-center justify-content-center me-2">
+                            <span id="user-initials" class="fw-bold">?</span>
+                        </div>
+                        <div class="user-info">
+                            <p id="display-username" class="m-0 fw-bold text-white small">Loading...</p>
+                            <p id="display-role" class="m-0 text-muted smaller text-uppercase" style="font-size: 0.7rem;"></p>
+                        </div>
+                    </div>
+                    <a href="#" class="list-group-item list-group-item-action bg-danger text-white border-0 py-2 rounded" id="logout-button">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- /#sidebar-wrapper -->
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <nav class="navbar navbar-expand-lg navbar-light bg-transparent py-4 px-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-align-left primary-text fs-4 me-3" id="menu-toggle"></i>
+                    <h2 class="fs-2 m-0" id="page-title">Dashboard</h2>
+                </div>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </nav>
+
+            <div class="container-fluid px-4">
+                <!-- Stats Cards Row 1 -->
+                <div class="row g-3 my-2">
+                    <div class="col-md-3">
+                        <a href="inventory.html" class="text-decoration-none">
+                            <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-primary border-5 dashboard-stat-card">
+                                <div>
+                                    <h3 class="fs-2 text-dark" id="stats-medicines">0</h3>
+                                    <p class="fs-5 text-muted">Total Medicines</p>
+                                </div>
+                                <i class="fas fa-pills fs-1 primary-text"></i>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-3">
+                        <a href="sales.html?filter=today" class="text-decoration-none">
+                            <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-success border-5 dashboard-stat-card">
+                                <div>
+                                    <h3 class="fs-2 text-dark" id="stats-sales-today">0.00</h3>
+                                    <p class="fs-5 text-muted">Sales Today</p>
+                                </div>
+                                <i class="fas fa-hand-holding-usd fs-1 text-success"></i>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-3">
+                        <a href="sales.html?filter=due" class="text-decoration-none">
+                            <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-danger border-5 dashboard-stat-card">
+                                <div>
+                                    <h3 class="fs-2 text-dark" id="stats-due">0.00</h3>
+                                    <p class="fs-5 text-muted">Customer Due</p>
+                                </div>
+                                <i class="fas fa-exclamation-triangle fs-1 text-danger"></i>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-3">
+                        <a href="inventory.html?section=purchases&filter=unpaid" class="text-decoration-none">
+                            <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-info border-5 dashboard-stat-card">
+                                <div>
+                                    <h3 class="fs-2 text-dark" id="stats-supplier-due">0.00</h3>
+                                    <p class="fs-5 text-muted">Supplier Due</p>
+                                </div>
+                                <i class="fas fa-truck fs-1 text-info"></i>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Stats Cards Row 2 -->
+                <div class="row g-3 my-2">
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-warning border-5" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#lowStockModal">
+                            <div>
+                                <h3 class="fs-2" id="stats-low-stock">0</h3>
+                                <p class="fs-5 text-muted">Low Stock</p>
+                            </div>
+                            <i class="fas fa-box-open fs-1 text-warning"></i>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-danger border-5" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#expiryAlertModal">
+                            <div>
+                                <h3 class="fs-2" id="stats-expired">0</h3>
+                                <p class="fs-5 text-muted">Expired</p>
+                            </div>
+                            <i class="fas fa-skull-crossbones fs-1 text-danger"></i>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-warning border-5" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#expiryAlertModal">
+                            <div>
+                                <h3 class="fs-2" id="stats-expiring-soon">0</h3>
+                                <p class="fs-5 text-muted">Expiring Soon</p>
+                            </div>
+                            <i class="fas fa-clock fs-1 text-warning"></i>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded border-start border-secondary border-5">
+                            <div>
+                                <h3 class="fs-2" id="stats-total-expiring">0</h3>
+                                <p class="fs-5 text-muted">Expiring (90d)</p>
+                            </div>
+                            <i class="fas fa-calendar-times fs-1 text-secondary"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Row -->
+                <div class="row my-4">
+                    <!-- Recent Sales -->
+                    <div class="col-lg-7">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-header bg-white py-3">
+                                <h5 class="m-0 fw-bold"><i class="fas fa-shopping-cart me-2 text-primary"></i>Recent Sales</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">#</th>
+                                                <th scope="col">Date</th>
+                                                <th scope="col">Buyer</th>
+                                                <th scope="col">Total</th>
+                                                <th scope="col">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-sales-table-body">
+                                            <!-- Populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Alert -->
+                    <div class="col-lg-5">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="m-0 fw-bold"><i class="fas fa-exclamation-circle me-2 text-warning"></i>Low Stock Alert</h5>
+                                <span class="badge bg-warning" id="low-stock-badge">0</span>
+                            </div>
+                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                <ul class="list-group list-group-flush" id="low-stock-list">
+                                    <li class="list-group-item text-center text-muted">No low stock items</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expiry Alerts Row -->
+                <div class="row my-4">
+                    <div class="col-12">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="m-0 fw-bold"><i class="fas fa-hourglass-half me-2 text-danger"></i>Expiry Alerts</h5>
+                                <div>
+                                    <span class="badge bg-danger me-1" id="expired-badge">0 Expired</span>
+                                    <span class="badge bg-warning me-1" id="expiring-30-badge">0 in 30 days</span>
+                                    <span class="badge bg-info" id="expiring-60-badge">0 in 60 days</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                    <table class="table table-hover table-sm">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>Medicine</th>
+                                                <th>Quantity</th>
+                                                <th>Expiry Date</th>
+                                                <th>Status</th>
+                                                <th>Invoice #</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="expiry-alerts-table-body">
+                                            <tr><td colspan="5" class="text-center text-muted">No expiry alerts</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Modal -->
+            <div class="modal fade" id="lowStockModal" tabindex="-1" aria-labelledby="lowStockModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title" id="lowStockModalLabel"><i class="fas fa-box-open me-2"></i>Low Stock Medicines</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Medicine Name</th>
+                                        <th>Current Stock</th>
+                                        <th>Selling Price</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="low-stock-modal-body">
+                                    <tr><td colspan="5" class="text-center">No low stock items</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <a href="inventory.html" class="btn btn-primary">Go to Inventory</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expiry Alert Modal -->
+            <div class="modal fade" id="expiryAlertModal" tabindex="-1" aria-labelledby="expiryAlertModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="expiryAlertModalLabel"><i class="fas fa-clock me-2"></i>Medicine Expiry Details</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Expired Tab -->
+                            <ul class="nav nav-tabs" id="expiryTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active text-danger" id="expired-tab" data-bs-toggle="tab" data-bs-target="#expired-content" type="button" role="tab">
+                                        <i class="fas fa-skull-crossbones me-1"></i>Expired <span class="badge bg-danger" id="tab-expired-count">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link text-warning" id="expiring30-tab" data-bs-toggle="tab" data-bs-target="#expiring30-content" type="button" role="tab">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>30 Days <span class="badge bg-warning text-dark" id="tab-30-count">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link text-info" id="expiring60-tab" data-bs-toggle="tab" data-bs-target="#expiring60-content" type="button" role="tab">
+                                        <i class="fas fa-info-circle me-1"></i>60 Days <span class="badge bg-info" id="tab-60-count">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link text-secondary" id="expiring90-tab" data-bs-toggle="tab" data-bs-target="#expiring90-content" type="button" role="tab">
+                                        <i class="fas fa-calendar me-1"></i>90 Days <span class="badge bg-secondary" id="tab-90-count">0</span>
+                                    </button>
+                                </li>
+                            </ul>
+                            <div class="tab-content mt-3" id="expiryTabsContent">
+                                <div class="tab-pane fade show active" id="expired-content" role="tabpanel">
+                                    <table class="table table-striped table-sm">
+                                        <thead><tr><th>Medicine</th><th>Qty</th><th>Expired On</th><th>Days Expired</th><th>Invoice</th></tr></thead>
+                                        <tbody id="expired-modal-body"><tr><td colspan="5" class="text-center">No expired items</td></tr></tbody>
+                                    </table>
+                                </div>
+                                <div class="tab-pane fade" id="expiring30-content" role="tabpanel">
+                                    <table class="table table-striped table-sm">
+                                        <thead><tr><th>Medicine</th><th>Qty</th><th>Expires On</th><th>Days Left</th><th>Invoice</th></tr></thead>
+                                        <tbody id="expiring30-modal-body"><tr><td colspan="5" class="text-center">No items expiring in 30 days</td></tr></tbody>
+                                    </table>
+                                </div>
+                                <div class="tab-pane fade" id="expiring60-content" role="tabpanel">
+                                    <table class="table table-striped table-sm">
+                                        <thead><tr><th>Medicine</th><th>Qty</th><th>Expires On</th><th>Days Left</th><th>Invoice</th></tr></thead>
+                                        <tbody id="expiring60-modal-body"><tr><td colspan="5" class="text-center">No items expiring in 60 days</td></tr></tbody>
+                                    </table>
+                                </div>
+                                <div class="tab-pane fade" id="expiring90-content" role="tabpanel">
+                                    <table class="table table-striped table-sm">
+                                        <thead><tr><th>Medicine</th><th>Qty</th><th>Expires On</th><th>Days Left</th><th>Invoice</th></tr></thead>
+                                        <tbody id="expiring90-modal-body"><tr><td colspan="5" class="text-center">No items expiring in 90 days</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /#page-content-wrapper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/loader.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

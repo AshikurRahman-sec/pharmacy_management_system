@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sales - Pharmacy Management System</title>
+    <script>if (!localStorage.getItem("accessToken")) { window.location.href = "login.html"; }</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <script src="js/api-utils.js"></script>
+</head>
+<body>
+    <div class="loader-wrapper" id="loader-wrapper">
+        <div class="loader"></div>
+    </div>
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div class="bg-dark text-white p-3 sidebar" id="sidebar-wrapper">
+            <div class="sidebar-heading text-center py-4 primary-text fs-4 fw-bold text-uppercase border-bottom">Pharmacy MS</div>
+            <div class="list-group list-group-flush my-3">
+                <a href="index.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
+                
+                <a href="inventory.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-inventory"><i class="fas fa-boxes me-2"></i>Inventory</a>
+                
+                <a href="sales.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-sales"><i class="fas fa-chart-line me-2"></i>Billing</a>
+
+                <a href="suppliers.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-suppliers"><i class="fas fa-truck me-2"></i>Suppliers</a>
+
+                <a href="employees.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-employees"><i class="fas fa-users me-2"></i>Employees</a>
+                
+                <a href="payroll.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-salaries"><i class="fas fa-wallet me-2"></i>Payroll</a>
+
+                <a href="expenses.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-expenses"><i class="fas fa-money-bill-wave me-2"></i>Expenses</a>
+                
+                <a href="reports.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-reports"><i class="fas fa-file-alt me-2"></i>Reports</a>
+                
+                <a href="shareholders.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-shareholders"><i class="fas fa-handshake me-2"></i>Shareholders</a>
+                
+                <a href="users.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-users"><i class="fas fa-user-circle me-2"></i>Users</a>
+
+                <a href="activity_logs.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-activity-logs"><i class="fas fa-history me-2"></i>Activity Logs</a>
+
+                <!-- User Profile Section -->
+                <div class="mt-auto p-3 border-top border-secondary">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="user-avatar-circle bg-primary text-white d-flex align-items-center justify-content-center me-2">
+                            <span id="user-initials" class="fw-bold">?</span>
+                        </div>
+                        <div class="user-info">
+                            <p id="display-username" class="m-0 fw-bold text-white small">Loading...</p>
+                            <p id="display-role" class="m-0 text-muted smaller text-uppercase" style="font-size: 0.7rem;"></p>
+                        </div>
+                    </div>
+                    <a href="#" class="list-group-item list-group-item-action bg-danger text-white border-0 py-2 rounded" id="logout-button">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- /#sidebar-wrapper -->
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <nav class="navbar navbar-expand-lg navbar-light bg-transparent py-4 px-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-align-left primary-text fs-4 me-3" id="menu-toggle"></i>
+                    <h2 class="fs-2 m-0" id="page-title">Sales Items</h2>
+                </div>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </nav>
+
+            <div class="container-fluid px-4">
+                <!-- New Sale Card -->
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        Record New Sale
+                        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSaleForm">
+                            <i class="bi bi-cart-plus"></i> New Sale
+                        </button>
+                    </div>
+                    <div class="collapse" id="collapseSaleForm">
+                        <div class="card-body">
+                            <form id="add-sale-form">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="sale_date" class="form-label">Sale Date</label>
+                                        <input type="date" class="form-control" id="sale_date" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="buyer_name" class="form-label">Buyer Name</label>
+                                        <input type="text" class="form-control" id="buyer_name" placeholder="Full Name">
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="buyer_mobile" class="form-label">Buyer Mobile</label>
+                                        <input type="text" class="form-control" id="buyer_mobile" placeholder="Mobile Number">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="buyer_address" class="form-label">Buyer Address</label>
+                                        <input type="text" class="form-control" id="buyer_address" placeholder="Address">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="amount_paid" class="form-label">Amount Paid (Taka)</label>
+                                        <input type="number" step="0.01" class="form-control" id="amount_paid" value="0.00">
+                                    </div>
+                                </div>
+
+                                <div id="sale-items-container">
+                                    <div class="row sale-item mb-3">
+                                        <div class="col-md-8 mb-3">
+                                            <label class="form-label">Medicine</label>
+                                            <select class="form-select medicine-select" required></select>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Quantity</label>
+                                            <input type="number" class="form-control quantity-input" required min="1" value="1">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary">Record Sale</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales List Card -->
+                <div class="card mt-4 shadow-sm">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0 fw-bold">Sales History</h5>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="sales-filter" style="width: 150px;">
+                                <option value="all">All Sales</option>
+                                <option value="today">Today Only</option>
+                                <option value="due">With Due Only</option>
+                                <option value="paid">Fully Paid</option>
+                            </select>
+                            <input type="date" class="form-control form-control-sm" id="sales-date-filter" style="width: 150px;">
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Buyer Name</th>
+                                        <th scope="col">Mobile</th>
+                                        <th scope="col">Total</th>
+                                        <th scope="col">Paid</th>
+                                        <th scope="col">Due</th>
+                                        <th scope="col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-table-body">
+                                    <tr>
+                                        <td colspan="8" class="text-center">Loading sales...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View Sale Items Modal -->
+            <div class="modal fade" id="viewSaleItemsModal" tabindex="-1" aria-labelledby="viewSaleItemsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="viewSaleItemsModalLabel"><i class="fas fa-receipt me-2"></i>Sale Details</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="sale-details-content">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p><strong>Sale ID:</strong> <span id="modal-sale-id"></span></p>
+                                    <p><strong>Date:</strong> <span id="modal-sale-date"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Buyer:</strong> <span id="modal-buyer-name"></span></p>
+                                    <p><strong>Mobile:</strong> <span id="modal-buyer-mobile"></span></p>
+                                    <p><strong>Address:</strong> <span id="modal-buyer-address"></span></p>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6>Items Purchased:</h6>
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Medicine</th>
+                                        <th>Quantity</th>
+                                        <th>Unit Price</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sale-items-table-body">
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <td colspan="4" class="text-end fw-bold">Total:</td>
+                                        <td class="fw-bold" id="modal-total-amount"></td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <td colspan="4" class="text-end fw-bold">Paid:</td>
+                                        <td class="fw-bold" id="modal-paid-amount"></td>
+                                    </tr>
+                                    <tr class="table-danger" id="modal-due-row">
+                                        <td colspan="4" class="text-end fw-bold">Due:</td>
+                                        <td class="fw-bold" id="modal-due-amount"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-success" onclick="printReceipt()"><i class="fas fa-print me-1"></i>Print Receipt</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Print Receipt Template (Hidden) -->
+            <div id="print-receipt-template" style="display: none;">
+                <div id="receipt-content" style="font-family: 'Courier New', monospace; max-width: 300px; margin: auto; padding: 10px;">
+                    <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
+                        <h3 style="margin: 0;">PHARMACY</h3>
+                        <p style="margin: 5px 0; font-size: 12px;">Medicine & Healthcare</p>
+                        <p style="margin: 0; font-size: 11px;">Thank you for your purchase!</p>
+                    </div>
+                    <div style="font-size: 12px; margin-bottom: 10px;">
+                        <p style="margin: 3px 0;"><strong>Receipt #:</strong> <span id="print-sale-id"></span></p>
+                        <p style="margin: 3px 0;"><strong>Date:</strong> <span id="print-sale-date"></span></p>
+                        <p style="margin: 3px 0;"><strong>Customer:</strong> <span id="print-buyer-name"></span></p>
+                    </div>
+                    <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-top: 1px dashed #000; border-bottom: 1px dashed #000;">
+                                <th style="text-align: left; padding: 5px 0;">Item</th>
+                                <th style="text-align: center;">Qty</th>
+                                <th style="text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="print-items-body">
+                        </tbody>
+                    </table>
+                    <div style="border-top: 1px dashed #000; margin-top: 10px; padding-top: 10px; font-size: 12px;">
+                        <p style="margin: 3px 0; display: flex; justify-content: space-between;"><span>Total:</span> <strong id="print-total"></strong></p>
+                        <p style="margin: 3px 0; display: flex; justify-content: space-between;"><span>Paid:</span> <span id="print-paid"></span></p>
+                        <p style="margin: 3px 0; display: flex; justify-content: space-between;" id="print-due-row"><span>Due:</span> <strong id="print-due" style="color: red;"></strong></p>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px; border-top: 2px dashed #000; padding-top: 10px; font-size: 11px;">
+                        <p style="margin: 0;">Thank you! Get well soon!</p>
+                        <p style="margin: 5px 0; font-size: 10px;">--- Keep this receipt ---</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /#page-content-wrapper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/loader.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/sales.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var el = document.getElementById("wrapper");
+            var toggleButton = document.getElementById("menu-toggle");
+
+            if (toggleButton) {
+                toggleButton.onclick = function () {
+                    el.classList.toggle("toggled");
+                };
+            }
+            
+            // Highlight active link
+            const currentPath = window.location.pathname.split('/').pop();
+            const navLinks = document.querySelectorAll('.list-group-item');
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Logout functionality
+            const logoutButton = document.getElementById('logout-button');
+            if (logoutButton) {
+                logoutButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    window.location.href = 'login.html';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

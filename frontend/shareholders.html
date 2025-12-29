@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shareholders - Pharmacy Management System</title>
+    <script>if (!localStorage.getItem("accessToken")) { window.location.href = "login.html"; }</script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <script src="js/api-utils.js"></script>
+</head>
+<body>
+    <div class="loader-wrapper" id="loader-wrapper">
+        <div class="loader"></div>
+    </div>
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div class="bg-dark text-white p-3 sidebar" id="sidebar-wrapper">
+            <div class="sidebar-heading text-center py-4 primary-text fs-4 fw-bold text-uppercase border-bottom">Pharmacy MS</div>
+            <div class="list-group list-group-flush my-3">
+                <a href="index.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
+                
+                <a href="inventory.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-inventory"><i class="fas fa-boxes me-2"></i>Inventory</a>
+                
+                <a href="sales.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-sales"><i class="fas fa-chart-line me-2"></i>Billing</a>
+
+                <a href="suppliers.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-suppliers"><i class="fas fa-truck me-2"></i>Suppliers</a>
+
+                <a href="employees.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-employees"><i class="fas fa-users me-2"></i>Employees</a>
+                
+                <a href="payroll.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-salaries"><i class="fas fa-wallet me-2"></i>Payroll</a>
+
+                <a href="expenses.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-expenses"><i class="fas fa-money-bill-wave me-2"></i>Expenses</a>
+                
+                <a href="reports.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-reports"><i class="fas fa-file-alt me-2"></i>Reports</a>
+                
+                <a href="shareholders.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold active" id="nav-shareholders"><i class="fas fa-handshake me-2"></i>Shareholders</a>
+
+                <a href="users.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-users"><i class="fas fa-user-circle me-2"></i>Users</a>
+
+                <a href="activity_logs.html" class="list-group-item list-group-item-action bg-transparent second-text fw-bold" id="nav-activity-logs"><i class="fas fa-history me-2"></i>Activity Logs</a>
+
+                <!-- User Profile Section -->
+                <div class="mt-auto p-3 border-top border-secondary">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="user-avatar-circle bg-primary text-white d-flex align-items-center justify-content-center me-2">
+                            <span id="user-initials" class="fw-bold">?</span>
+                        </div>
+                        <div class="user-info">
+                            <p id="display-username" class="m-0 fw-bold text-white small">Loading...</p>
+                            <p id="display-role" class="m-0 text-muted smaller text-uppercase" style="font-size: 0.7rem;"></p>
+                        </div>
+                    </div>
+                    <a href="#" class="list-group-item list-group-item-action bg-danger text-white border-0 py-2 rounded" id="logout-button">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- /#sidebar-wrapper -->
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <nav class="navbar navbar-expand-lg navbar-light bg-transparent py-4 px-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-align-left primary-text fs-4 me-3" id="menu-toggle"></i>
+                    <h2 class="fs-2 m-0" id="page-title">Shareholder Management</h2>
+                </div>
+            </nav>
+
+            <div class="container-fluid px-4">
+                <div class="accordion inventory-accordion" id="shareholderAccordion">
+                    
+                    <!-- Add Investment Section -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#addInvestmentSection"
+                                    aria-expanded="false" aria-controls="addInvestmentSection">
+                                <i class="fas fa-money-bill-wave me-3"></i>
+                                <span>Add New Investment</span>
+                            </button>
+                        </h2>
+                        <div id="addInvestmentSection" class="accordion-collapse collapse show" 
+                             data-bs-parent="#shareholderAccordion">
+                            <div class="accordion-body">
+                                <form id="add-investment-form">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="inv_shareholder_id" class="form-label">Select Shareholder (User)</label>
+                                            <select class="form-select" id="inv_shareholder_id" required>
+                                                <option value="">Choose User...</option>
+                                            </select>
+                                            <div class="form-text">Select a user to register as an investor.</div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label for="inv_amount" class="form-label">Amount (৳)</label>
+                                            <input type="number" step="0.01" class="form-control" id="inv_amount" required>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label for="inv_date" class="form-label">Date</label>
+                                            <input type="date" class="form-control" id="inv_date" required>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-success">Record Investment</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribute Profit Section -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#distributeProfitSection"
+                                    aria-expanded="false" aria-controls="distributeProfitSection">
+                                <i class="fas fa-hand-holding-usd me-3"></i>
+                                <span>Distribute Profit</span>
+                            </button>
+                        </h2>
+                        <div id="distributeProfitSection" class="accordion-collapse collapse" 
+                             data-bs-parent="#shareholderAccordion">
+                            <div class="accordion-body">
+                                <form id="distribute-profit-form">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="dist_shareholder_id" class="form-label">Select Shareholder</label>
+                                            <select class="form-select" id="dist_shareholder_id" required>
+                                                <option value="">Choose...</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label for="dist_amount" class="form-label">Profit Amount (৳)</label>
+                                            <input type="number" step="0.01" class="form-control" id="dist_amount" required>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label for="dist_date" class="form-label">Date</label>
+                                            <input type="date" class="form-control" id="dist_date" required>
+                                        </div>
+                                        <div class="col-12 mb-3">
+                                            <label for="dist_note" class="form-label">Note (Optional)</label>
+                                            <input type="text" class="form-control" id="dist_note" placeholder="e.g. Q4 2025 Dividend">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-warning text-dark">Distribute Profit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Shareholders List -->
+                <div class="card mt-4 shadow-sm">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="m-0 fw-bold">Shareholder Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Contact</th>
+                                        <th>Joined</th>
+                                        <th>Total Investment</th>
+                                        <th>Share %</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shareholders-table-body">
+                                    <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="3" class="text-end fw-bold">Total Capital:</td>
+                                        <td colspan="3" class="fw-bold text-success" id="total-system-investment">0.00 ৳</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/loader.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/shareholders.js"></script>
+</body>
+</html>
