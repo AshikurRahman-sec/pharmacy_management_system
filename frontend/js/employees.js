@@ -9,7 +9,18 @@ document.addEventListener("DOMContentLoaded", function() {
     const updateLinkUserSelect = document.getElementById('update_link_user_id');
 
     let allUsers = [];
-    const pageSize = 10;
+    let pageSize = 10;
+    let payrollPageSize = 10;
+
+    // Limit Change Handlers
+    document.getElementById('employees-page-size')?.addEventListener('change', function() {
+        pageSize = parseInt(this.value);
+        loadEmployees(1);
+    });
+    document.getElementById('payroll-page-size')?.addEventListener('change', function() {
+        payrollPageSize = parseInt(this.value);
+        loadEmployeeBills(1);
+    });
 
     async function loadUsers() {
         try {
@@ -24,19 +35,15 @@ document.addEventListener("DOMContentLoaded", function() {
         const employeeUsers = users.filter(u => u.role === 'employee');
         const options = '<option value="">Choose User...</option>' + 
             employeeUsers.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
-        
         if (linkUserSelect) linkUserSelect.innerHTML = options;
         if (updateLinkUserSelect) updateLinkUserSelect.innerHTML = options;
     }
 
     if (linkUserSelect) {
         linkUserSelect.addEventListener('change', function() {
-            const selectedUserId = this.value;
-            if (selectedUserId) {
-                const user = allUsers.find(u => u.id == selectedUserId);
-                if (user && !document.getElementById('employee_name').value) {
-                    document.getElementById('employee_name').value = user.username;
-                }
+            const user = allUsers.find(u => u.id == this.value);
+            if (user && !document.getElementById('employee_name').value) {
+                document.getElementById('employee_name').value = user.username;
             }
         });
     }
@@ -48,45 +55,54 @@ document.addEventListener("DOMContentLoaded", function() {
             const response = await fetchData(`employees/?skip=${skip}&limit=${pageSize}`);
             const employees = response.items ? response.items : response;
 
-            if (employeesTableBody) employeesTableBody.innerHTML = '';
-            if (billEmployeeSelect) billEmployeeSelect.innerHTML = '<option value="">Select an employee</option>';
+            if (employeesTableBody) {
+                employeesTableBody.innerHTML = '';
+                
+                // Update Range Info
+                const start = response.total === 0 ? 0 : skip + 1;
+                const end = Math.min(skip + pageSize, response.total);
+                const rangeEl = document.getElementById('employees-range-info');
+                if (rangeEl) rangeEl.textContent = `Showing ${start} - ${end} of ${response.total}`;
 
-            employees.forEach((employee, index) => {
-                if (employeesTableBody) {
+                employees.forEach((employee, index) => {
                     const sn = (response.page - 1) * pageSize + index + 1;
                     const linkedUser = employee.user ? `<br><small class="text-muted">User: ${employee.user.username}</small>` : '';
                     employeesTableBody.innerHTML += `<tr>
                         <th scope="row">${sn}</th>
                         <td>${employee.name}${linkedUser}</td>
                         <td>${employee.role}</td>
-                        <td>${employee.base_salary.toFixed(2)} ৳ <br><small class="text-muted">OT: ${employee.overtime_rate.toFixed(2)}/hr</small></td>
+                        <td>${employee.base_salary.toFixed(2)} ৳</td>
                         <td>
-                            <button class="btn btn-sm btn-warning" onclick="editEmployee(${employee.id}, '${employee.name}', '${employee.role}', ${employee.base_salary}, ${employee.overtime_rate}, ${employee.user_id || 'null'})">Edit</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteEmployee(${employee.id})">Delete</button>
+                            <button class="btn btn-sm btn-link p-0" onclick="editEmployee(${employee.id}, '${employee.name}', '${employee.role}', ${employee.base_salary}, ${employee.overtime_rate}, ${employee.user_id || 'null'})"><i class="fas fa-edit text-warning"></i></button>
+                            <button class="btn btn-sm btn-link p-0 ms-2" onclick="deleteEmployee(${employee.id})"><i class="fas fa-trash text-danger"></i></button>
                         </td>
                     </tr>`;
-                }
-                if (billEmployeeSelect) {
-                    billEmployeeSelect.innerHTML += `<option value="${employee.id}">${employee.name}</option>`;
-                }
-            });
-
-            if (response.pages) renderPagination(response.page, response.pages, "employees-pagination", loadEmployees);
-        } catch (error) {
-            if (employeesTableBody) employeesTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${error.message}</td></tr>`;
-        }
+                });
+                if (response.pages) renderPagination(response.page, response.pages, "employees-pagination", loadEmployees);
+            }
+            if (billEmployeeSelect) {
+                billEmployeeSelect.innerHTML = '<option value="">Select employee</option>' + employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+            }
+        } catch (error) {}
     }
 
     async function loadEmployeeBills(page = 1) {
         if (!employeeBillsTableBody) return;
         try {
-            const skip = (page - 1) * pageSize;
-            const response = await fetchData(`employee-bills/?skip=${skip}&limit=${pageSize}`);
+            const skip = (page - 1) * payrollPageSize;
+            const response = await fetchData(`employee-bills/?skip=${skip}&limit=${payrollPageSize}`);
             const bills = response.items ? response.items : response;
 
             employeeBillsTableBody.innerHTML = '';
+            
+            // Update Range Info
+            const start = response.total === 0 ? 0 : skip + 1;
+            const end = Math.min(skip + payrollPageSize, response.total);
+            const rangeEl = document.getElementById('payroll-range-info');
+            if (rangeEl) rangeEl.textContent = `Showing ${start} - ${end} of ${response.total}`;
+
             bills.forEach((bill, index) => {
-                const sn = (response.page - 1) * pageSize + index + 1;
+                const sn = (response.page - 1) * payrollPageSize + index + 1;
                 employeeBillsTableBody.innerHTML += `<tr>
                     <th scope="row">${sn}</th>
                     <td>${bill.employee.name}</td>
@@ -96,11 +112,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     <td>${bill.total_amount}</td>
                 </tr>`;
             });
-
             if (response.pages) renderPagination(response.page, response.pages, "payroll-pagination", loadEmployeeBills);
-        } catch (error) {
-            if (employeeBillsTableBody) employeeBillsTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${error.message}</td></tr>`;
-        }
+        } catch (error) {}
     }
 
     if (addEmployeeForm) {
@@ -113,13 +126,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 overtime_rate: parseFloat(document.getElementById('overtime_rate').value) || 0,
                 user_id: document.getElementById('link_user_id').value ? parseInt(document.getElementById('link_user_id').value) : null
             };
-            try {
-                await fetchData('employees/', 'POST', formData);
-                addEmployeeForm.reset();
-                bootstrap.Collapse.getInstance(document.getElementById('collapseAddEmployeeForm'))?.hide();
-                await loadEmployees(1);
-                alert('Success!');
-            } catch (error) { alert(`Error: ${error.message}`); }
+            await fetchData('employees/', 'POST', formData);
+            addEmployeeForm.reset();
+            bootstrap.Collapse.getInstance(document.getElementById('collapseAddEmployeeForm'))?.hide();
+            loadEmployees(1);
         });
     }
 
@@ -144,12 +154,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 overtime_rate: parseFloat(document.getElementById('update_overtime_rate').value) || 0,
                 user_id: document.getElementById('update_link_user_id').value ? parseInt(document.getElementById('update_link_user_id').value) : null
             };
-            try {
-                await fetchData(`employees/${id}`, 'PUT', formData);
-                bootstrap.Modal.getInstance(document.getElementById('updateEmployeeModal'))?.hide();
-                await loadEmployees(1);
-                alert('Updated!');
-            } catch (error) { alert(`Error: ${error.message}`); }
+            await fetchData(`employees/${id}`, 'PUT', formData);
+            bootstrap.Modal.getInstance(document.getElementById('updateEmployeeModal'))?.hide();
+            loadEmployees(1);
         });
     }
 
@@ -162,20 +169,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 base_amount: parseFloat(document.getElementById('base_amount').value),
                 overtime_amount: parseFloat(document.getElementById('overtime_amount').value)
             };
-            try {
-                await fetchData('employee-bills/', 'POST', formData);
-                addEmployeeBillForm.reset();
-                bootstrap.Collapse.getInstance(document.getElementById('collapsePaySalaryForm'))?.hide();
-                await loadEmployeeBills(1);
-                alert('Paid!');
-            } catch (error) { alert(`Error: ${error.message}`); }
+            await fetchData('employee-bills/', 'POST', formData);
+            addEmployeeBillForm.reset();
+            bootstrap.Collapse.getInstance(document.getElementById('collapsePaySalaryForm'))?.hide();
+            loadEmployeeBills(1);
         });
     }
 
     window.deleteEmployee = async function(id) {
-        if (confirm('Are you sure?')) {
+        if (confirm('Delete this employee?')) {
             await fetchData(`employees/${id}`, 'DELETE');
-            await loadEmployees(1);
+            loadEmployees(1);
         }
     };
 

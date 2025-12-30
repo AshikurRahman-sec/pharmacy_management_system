@@ -14,14 +14,24 @@ document.addEventListener("DOMContentLoaded", function() {
     
     let isSelectingSuggestion = false;
     let selectedMedicineId = null;
-    const pageSize = 10;
+    let pageSize = 10;
+    let purchasePageSize = 10;
     let allSuppliers = [];
     let allManufacturers = [];
     let userTypedNames = new Set();
     let pieceUnitId = null;
     let invoiceItems = [];
 
-    // --- Data Fetching ---
+    // Independent Page Size Handlers
+    document.getElementById('inventory-page-size')?.addEventListener('change', function() {
+        pageSize = parseInt(this.value);
+        fetchMedicines(1);
+    });
+    document.getElementById('purchase-page-size')?.addEventListener('change', function() {
+        purchasePageSize = parseInt(this.value);
+        loadPurchases(1);
+    });
+
     async function fetchMedicines(page = 1) {
         try {
             const searchTerm = medicineSearch?.value?.trim() || '';
@@ -30,6 +40,9 @@ document.addEventListener("DOMContentLoaded", function() {
             const res = await fetchData(`medicines/?skip=${skip}&limit=${pageSize}&search=${encodeURIComponent(searchTerm)}&stock_status=${status}`);
             if (res.items) {
                 document.getElementById('stock-count-badge').textContent = `${res.total} items`;
+                const start = res.total === 0 ? 0 : skip + 1;
+                const end = Math.min(skip + pageSize, res.total);
+                document.getElementById('medicine-range-info').textContent = `Showing ${start} - ${end} of ${res.total}`;
                 displayMedicines(res.items, res.page);
                 renderPagination(res.page, res.pages, "medicine-pagination", fetchMedicines);
             }
@@ -38,10 +51,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     async function loadPurchases(page = 1) {
         try {
-            const skip = (page - 1) * pageSize;
-            const res = await fetchData(`purchases/?skip=${skip}&limit=${pageSize}`);
+            const skip = (page - 1) * purchasePageSize;
+            const res = await fetchData(`purchases/?skip=${skip}&limit=${purchasePageSize}`);
             if (res.items) {
                 document.getElementById('purchase-count-badge').textContent = `${res.total} invoices`;
+                const start = res.total === 0 ? 0 : skip + 1;
+                const end = Math.min(skip + purchasePageSize, res.total);
+                document.getElementById('purchase-range-info').textContent = `Showing ${start} - ${end} of ${res.total}`;
                 displayPurchases(res.items, res.page);
                 renderPagination(res.page, res.pages, "purchase-pagination", loadPurchases);
             }
@@ -49,23 +65,23 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function displayMedicines(medicines, page = 1) {
+        if (!medicinesTableBody) return;
         medicinesTableBody.innerHTML = medicines.map((m, i) => {
             const sn = (page - 1) * pageSize + i + 1;
             const sc = m.stock_quantity === 0 ? 'text-danger fw-bold' : m.stock_quantity < 10 ? 'text-warning fw-bold' : 'text-success';
-            return `<tr><td>${sn}</td><td><strong>${m.name}</strong></td><td>${m.generic_name || '-'}</td><td>${m.strength || '-'}</td><td>${m.medicine_type}</td><td>${m.manufacturer}</td><td class="${sc}">${m.stock_quantity}</td><td>${m.purchase_price.toFixed(2)}</td><td>${m.selling_price.toFixed(2)}</td><td><button class="btn btn-sm btn-link text-danger p-0" onclick="deleteMedicine(${m.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+            return `<tr><td>${sn}</td><td><strong>${m.name}</strong></td><td>${m.generic_name || '-'}</td><td>${m.strength || '-'}</td><td>${m.medicine_type}</td><td>${m.manufacturer}</td><td class="${sc}">${m.stock_quantity}</td><td>${m.purchase_price.toFixed(2)}</td><td>${m.selling_price.toFixed(2)}</td><td><button class="btn btn-sm btn-link p-0 text-danger" onclick="deleteMedicine(${m.id})"><i class="fas fa-trash"></i></button></td></tr>`;
         }).join('');
     }
 
     function displayPurchases(purchases, page = 1) {
         document.getElementById('purchases-table-body').innerHTML = purchases.map((p, i) => {
-            const sn = (page - 1) * pageSize + i + 1;
+            const sn = (page - 1) * purchasePageSize + i + 1;
             const net = p.total_amount - (p.invoice_discount || 0);
             const statusClass = p.payment_status === 'paid' ? 'success' : p.payment_status === 'partial' ? 'warning' : 'danger';
             return `<tr><td>${sn}</td><td>${p.invoice_number}</td><td>${p.supplier_name}</td><td>${p.purchase_date}</td><td>${net.toFixed(2)}</td><td>${p.paid_amount.toFixed(2)}</td><td class="${(net-p.paid_amount)>0?'text-danger fw-bold':''}">${(net-p.paid_amount).toFixed(2)}</td><td><span class="badge bg-${statusClass}">${p.payment_status}</span></td><td><button class="btn btn-sm btn-link p-0" onclick="viewInvoiceDetails(${p.id})"><i class="fas fa-eye text-primary"></i></button> <button class="btn btn-sm btn-link p-0 ms-2 text-success" onclick="openPaymentModal(${p.id})"><i class="fas fa-money-bill-wave"></i></button></td></tr>`;
         }).join('');
     }
 
-    // --- Action Handlers ---
     window.openPaymentModal = async function(id) {
         const p = await fetchData(`purchases/${id}`);
         const net = p.total_amount - (p.invoice_discount || 0);
@@ -79,8 +95,8 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('update-payment-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('payment-purchase-id').value;
-        const paid = document.getElementById('payment-paid-amount').value;
-        await fetchData(`purchases/${id}/paid`, 'PUT', { paid_amount: parseFloat(paid) });
+        const paid = parseFloat(document.getElementById('payment-paid-amount').value) || 0;
+        await fetchData(`purchases/${id}/paid`, 'PUT', { paid_amount: paid });
         bootstrap.Modal.getInstance(document.getElementById('updatePaymentModal')).hide();
         loadPurchases(1);
     });
@@ -95,7 +111,6 @@ document.addEventListener("DOMContentLoaded", function() {
         modal.show();
     };
 
-    // --- Suggestions ---
     const supplierInput = document.getElementById('batchSupplierName');
     const manufacturerInput = document.getElementById('manufacturer');
     const supplierSuggestions = document.getElementById('supplier-suggestions');
@@ -114,8 +129,8 @@ document.addEventListener("DOMContentLoaded", function() {
             if(matches.length > 0) {
                 supplierSuggestions.innerHTML = matches.map(m => `<div class="suggestion-item">${m}</div>`).join('');
                 supplierSuggestions.querySelectorAll('.suggestion-item').forEach((el, i) => el.onclick = () => {
-                    isSelecting=true; supplierInput.value=matches[i]; manufacturerInput.value=matches[i]; supplierSuggestions.style.display='none';
-                    setTimeout(()=>isSelecting=false, 100);
+                    isSelectingSuggestion=true; supplierInput.value=matches[i]; manufacturerInput.value=matches[i]; supplierSuggestions.style.display='none';
+                    setTimeout(()=>isSelectingSuggestion=false, 100);
                 });
                 supplierSuggestions.style.display = 'block';
             } else supplierSuggestions.style.display='none';
