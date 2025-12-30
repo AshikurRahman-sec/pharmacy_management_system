@@ -159,16 +159,6 @@ def create_purchase_invoice(
             selling_price=item.medicine_selling_price # Saving selling price to batch
         )
         crud.create_medicine_batch(db=db, batch=batch_data)
-
-        # Create Purchase Item
-        db_item = models.PurchaseItem(
-            purchase_id=db_purchase.id,
-            medicine_id=medicine_id,
-            quantity=item.quantity,
-            price_at_purchase=item.medicine_purchase_price,
-            expiry_date=item.expiry_date,
-            selling_price=item.medicine_selling_price # Saving selling price to history
-        )
         db.add(db_item)
         total_invoice_amount += (item.quantity * item.medicine_purchase_price)
 

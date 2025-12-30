@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, DateTime, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from .database import Base
 import datetime
@@ -15,7 +15,8 @@ class Medicine(Base):
     stock_quantity = Column(Integer)
     purchase_price = Column(Float)
     selling_price = Column(Float)
-    purchase_date = Column(Date) # Added purchase_date
+
+    __table_args__ = (UniqueConstraint('name', 'strength', 'manufacturer', 'medicine_type', name='_name_strength_mfg_uc'),)
 
     batches = relationship("MedicineBatch", back_populates="medicine", cascade="all, delete-orphan")
 

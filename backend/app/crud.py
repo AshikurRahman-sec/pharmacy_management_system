@@ -109,11 +109,10 @@ def create_medicine_batch(db: Session, batch: schemas.MedicineBatchCreate):
     db_batch = models.MedicineBatch(**batch.dict())
     db.add(db_batch)
     
-    # Update medicine's stock quantity and purchase_date
+    # Update medicine's stock quantity
     medicine = db.query(models.Medicine).filter(models.Medicine.id == batch.medicine_id).first()
     if medicine:
         medicine.stock_quantity += batch.batch_quantity
-        medicine.purchase_date = batch.purchase_date or datetime.date.today()
     
     db.commit()
     db.refresh(db_batch)

@@ -276,25 +276,24 @@ body {
 }
 
 /* Sidebar Links */
-.list-group-item {
+#sidebar-wrapper .list-group-item {
     border: none;
-    padding: 14px 24px;
-    font-size: 0.95rem;
+    padding: 12px 20px;
+    font-size: 0.9rem;
     color: var(--sidebar-text);
     background-color: transparent;
     transition: all 0.2s ease-in-out;
-    margin: 4px 12px;
+    margin: 2px 10px;
     border-radius: 8px !important;
     display: flex;
     align-items: center;
 }
 
-.list-group-item i {
-    width: 24px;
+#sidebar-wrapper .list-group-item i {
+    width: 20px;
     text-align: center;
-    margin-right: 12px;
-    font-size: 1.1rem;
-    transition: transform 0.2s;
+    margin-right: 10px;
+    font-size: 1rem;
 }
 
 .list-group-item:hover {

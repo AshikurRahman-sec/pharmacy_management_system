@@ -85,12 +85,22 @@ document.addEventListener("DOMContentLoaded", function() {
                     lowStockList.innerHTML = '';
                     lowStockMeds.forEach(med => {
                         const urgencyClass = med.stock_quantity === 0 ? 'danger' : med.stock_quantity < 5 ? 'warning' : 'info';
-                        const item = `<li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="fw-bold">${med.name}</span>
-                                <br><small class="text-muted">Price: ${med.selling_price.toFixed(2)} ৳</small>
+                        
+                        // Clean display for details - no fallback string
+                        const details = [];
+                        if (med.strength) details.push(med.strength);
+                        if (med.manufacturer) details.push(med.manufacturer);
+                        const detailText = details.length > 0 ? details.join(' | ') : '';
+
+                        const item = `<li class="list-group-item py-2 px-3 d-flex justify-content-between align-items-center bg-white border-bottom" style="padding-top: 0.75rem !important; padding-bottom: 0.75rem !important;">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold text-dark mb-0" style="font-size: 0.85rem; line-height: 1.2;">${med.name}</div>
+                                <div class="text-muted smaller" style="font-size: 0.75rem;">${detailText}</div>
                             </div>
-                            <span class="badge bg-${urgencyClass} rounded-pill">${med.stock_quantity} left</span>
+                            <div class="d-flex align-items-center text-end">
+                                <span class="me-3 fw-bold text-primary" style="font-size: 0.85rem;">${med.selling_price.toFixed(2)} ৳</span>
+                                <span class="badge bg-${urgencyClass} rounded-pill shadow-sm" style="font-size: 0.75rem; min-width: 60px; padding: 0.4em 0.8em;">${med.stock_quantity} Left</span>
+                            </div>
                         </li>`;
                         lowStockList.innerHTML += item;
                     });
@@ -104,12 +114,20 @@ document.addEventListener("DOMContentLoaded", function() {
                     } else {
                         lowStockModalBody.innerHTML = '';
                         lowStockMeds.forEach((med, index) => {
+                            const details = [];
+                            if (med.generic_name) details.push(med.generic_name);
+                            if (med.strength) details.push(med.strength);
+                            const detailText = details.length > 0 ? details.join(' | ') : '';
+
                             const row = `<tr>
-                                <td>${index + 1}</td>
-                                <td>${med.name}</td>
-                                <td><span class="badge bg-${med.stock_quantity === 0 ? 'danger' : 'warning'}">${med.stock_quantity}</span></td>
-                                <td>${med.selling_price.toFixed(2)} ৳</td>
-                                <td><a href="inventory.html" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Restock</a></td>
+                                <td class="py-3">${index + 1}</td>
+                                <td class="py-3">
+                                    <div class="fw-bold" style="font-size: 0.85rem;">${med.name}</div>
+                                    <small class="text-muted smaller">${detailText}</small>
+                                </td>
+                                <td class="py-3"><span class="badge bg-${med.stock_quantity === 0 ? 'danger' : 'warning'} rounded-pill px-2 py-1 shadow-sm" style="font-size: 0.75rem;">${med.stock_quantity} Pcs</span></td>
+                                <td class="py-3 fw-bold text-primary" style="font-size: 0.85rem;">${med.selling_price.toFixed(2)} ৳</td>
+                                <td class="py-3"><a href="inventory.html" class="btn btn-sm btn-primary rounded-pill px-3 py-1"><i class="fas fa-plus small"></i></a></td>
                             </tr>`;
                             lowStockModalBody.innerHTML += row;
                         });

@@ -68,7 +68,6 @@ class MedicineCreate(MedicineBase):
 class Medicine(MedicineBase):
     id: int
     stock_quantity: int # Kept in the response model
-    purchase_date: Optional[date] = None # Added purchase_date
     batches: List[MedicineBatch] = [] # Forward reference for type hinting
 
     class Config:
