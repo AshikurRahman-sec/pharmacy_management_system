@@ -1,0 +1,31 @@
+medicine_name,generic_name,manufacturer,strength,type,mrp
+A-Cold,Bromhexine Hydrochloride,ACME Laboratories Ltd.,4 mg/5 ml,Syrup,40.00
+A-Fenac,Diclofenac Sodium,ACME Laboratories Ltd.,25 mg,Tablet,0.55
+A-Fenac,Diclofenac Sodium,ACME Laboratories Ltd.,50 mg,Tablet,2.00
+A-Fenac,Diclofenac Sodium,ACME Laboratories Ltd.,75 mg/3 ml,IM Injection,14.10
+A-Fenac,Diclofenac Sodium,ACME Laboratories Ltd.,12.5 mg,Suppository,9.00
+A-Fenac,Diclofenac Sodium,ACME Laboratories Ltd.,50 mg,Suppository,15.00
+A-Fenac,Diclofenac Sodium,ACME Laboratories Ltd.,1% w/w,Gel,13.00
+A-Fenac K,Diclofenac Potassium,ACME Laboratories Ltd.,50 mg,Tablet,4.00
+A-Fenac Plus,Diclofenac Sodium + Lidocaine Hydrochloride,ACME Laboratories Ltd.,(75 mg+20 mg)/2 ml,IM Injection,15.00
+A-Fenac SR,Diclofenac Sodium,ACME Laboratories Ltd.,100 mg,Tablet (Sustained Release),3.50
+A-Flox,Flucloxacillin Sodium,ACME Laboratories Ltd.,250 mg,Capsule,8.00
+A-Flox,Flucloxacillin Sodium,ACME Laboratories Ltd.,500 mg,Capsule,14.00
+A-Flox,Flucloxacillin Sodium,ACME Laboratories Ltd.,125 mg/5 ml,Powder for Suspension,80.00
+A-Flox,Flucloxacillin Sodium,ACME Laboratories Ltd.,500 mg/vial,IM/IV Injection,45.30
+A-Forte,Vitamin A,Globe Pharmaceuticals Ltd.,50000 IU,Capsule,1.90
+A-Kit,Mifepristone + Misoprostol,ACME Laboratories Ltd.,200 mg+200 mcg,Tablet,300.00
+A-Meb,Mebeverine Hydrochloride,ACME Laboratories Ltd.,135 mg,Tablet,6.01
+A-Mectin,Ivermectin (Tablet),ACME Laboratories Ltd.,6 mg,Tablet,15.00
+A-Mectin,Ivermectin (Tablet),ACME Laboratories Ltd.,12 mg,Tablet,30.00
+A-Migel,Miconazole Nitrate,ACME Laboratories Ltd.,2% w/w,Oral Gel,75.00
+A-Mycin,Erythromycin (Lotion),Aristopharma Ltd.,3% W/V,Lotion,120.00
+A-Mycin,Erythromycin (Oral),Aristopharma Ltd.,125 mg/5 ml,Powder for Suspension,84.75
+A-Mycin,Erythromycin (Oral),Aristopharma Ltd.,200 mg/5 ml,Pediatric Drops,60.00
+A-One,Paracetamol,Apex Pharmaceuticals Ltd.,120 mg/5 ml,Oral Suspension,35.00
+A-One Plus,Paracetamol + Caffeine,Apex Pharmaceuticals Ltd.,500 mg+65 mg,Tablet,2.40
+A-One XR,Paracetamol,Apex Pharmaceuticals Ltd.,665 mg,Tablet (Extended Release),2.00
+A-Pak,Aceclofenac,Benham Pharmaceuticals Ltd.,100 mg,Tablet,5.00
+A-Pak SR,Aceclofenac,Benham Pharmaceuticals Ltd.,200 mg,Tablet (Sustained Release),8.00
+A-Phenicol,Chloramphenicol (Ophthalmic),ACME Laboratories Ltd.,0.5%,Ophthalmic Solution,34.50
+A-Phenicol D,Dexamethasone + Chloramphenicol,ACME Laboratories Ltd.,0.1%+0.5%,Ophthalmic Solution,70.21

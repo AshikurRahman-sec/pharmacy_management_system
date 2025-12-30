@@ -75,16 +75,26 @@ async def create_user(
     return crud.create_user(db=db, user=user)
 
 
-@router.get("/users/", response_model=List[schemas.User])
+@router.get("/users/", response_model=schemas.PaginatedResponse[schemas.User])
 async def get_users(
     skip: int = 0,
     limit: int = 100,
+    search: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user),
 ):
     if current_user.role not in ["superadmin", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view users")
-    return crud.get_users(db, skip=skip, limit=limit)
+    data = crud.get_users(db, skip=skip, limit=limit, search=search)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
 
 
 @router.delete("/users/{user_id}", response_model=schemas.User)

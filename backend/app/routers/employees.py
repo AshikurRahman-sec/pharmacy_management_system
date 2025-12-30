@@ -18,16 +18,26 @@ def create_employee(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create employees")
     return crud.create_employee(db=db, employee=employee)
 
-@router.get("/employees/", response_model=List[schemas.Employee])
+@router.get("/employees/", response_model=schemas.PaginatedResponse[schemas.Employee])
 def read_employees(
     skip: int = 0,
     limit: int = 100,
+    search: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
     if current_user.role not in ["superadmin", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view employees")
-    return crud.get_employees(db, skip=skip, limit=limit)
+    data = crud.get_employees(db, skip=skip, limit=limit, search=search)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
 
 @router.put("/employees/{employee_id}", response_model=schemas.Employee)
 def update_employee(
@@ -66,7 +76,7 @@ def create_employee_bill(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create employee bills")
     return crud.create_employee_bill(db=db, bill=bill)
 
-@router.get("/employee-bills/", response_model=List[schemas.EmployeeBill])
+@router.get("/employee-bills/", response_model=schemas.PaginatedResponse[schemas.EmployeeBill])
 def read_employee_bills(
     skip: int = 0,
     limit: int = 100,
@@ -75,4 +85,13 @@ def read_employee_bills(
 ):
     if current_user.role not in ["superadmin", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view employee bills")
-    return crud.get_employee_bills(db, skip=skip, limit=limit)
+    data = crud.get_employee_bills(db, skip=skip, limit=limit)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }

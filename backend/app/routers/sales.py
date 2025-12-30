@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -17,18 +17,29 @@ def create_sale(
     if current_user.role not in ["superadmin", "admin", "employee"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create sales")
     try:
-        return crud.create_sale(db=db, sale=sale)
+        return crud.create_sale(db=db, sale=sale, user_id=current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/sales/", response_model=List[schemas.Sale])
+@router.get("/sales/", response_model=schemas.PaginatedResponse[schemas.Sale])
 def read_sales(
     skip: int = 0,
     limit: int = 100,
+    filter_type: str = Query(None, alias="filter"),
+    date: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    return crud.get_sales(db, skip=skip, limit=limit)
+    data = crud.get_sales(db, skip=skip, limit=limit, filter_type=filter_type, date_filter=date)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
 
 @router.get("/sales/{sale_id}", response_model=schemas.Sale)
 def read_sale(

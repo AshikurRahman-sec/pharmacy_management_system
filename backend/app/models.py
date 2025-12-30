@@ -8,6 +8,10 @@ class Medicine(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
+    generic_name = Column(String, index=True)
+    manufacturer = Column(String, index=True)
+    strength = Column(String)
+    medicine_type = Column(String) # Tablet, Syrup, Capsule, etc.
     stock_quantity = Column(Integer)
     purchase_price = Column(Float)
     selling_price = Column(Float)
@@ -25,10 +29,12 @@ class MedicineBatch(Base):
     batch_quantity = Column(Integer)  # Quantity in this specific batch
     unit_id = Column(Integer, ForeignKey("units.id")) # Foreign key to the units table
     per_product_discount = Column(Float)
+    discount_type = Column(String, default="fixed") # 'fixed' or 'percentage'
     invoice_number = Column(String, index=True) # Unique identifier for the batch (Supplier Invoice Number)
     expiry_date = Column(Date)
     purchase_date = Column(Date) # Added purchase_date to track when this batch was bought
     total_batch_discount = Column(Float) # Total discount for this batch (e.g., from supplier)
+    selling_price = Column(Float) # Added batch-wise selling price
 
     medicine = relationship("Medicine", back_populates="batches")
     unit = relationship("Unit", back_populates="batches")
@@ -44,6 +50,7 @@ class Purchase(Base):
     purchase_date = Column(Date)
     total_amount = Column(Float)
     invoice_discount = Column(Float, default=0.0) # Added invoice_discount
+    discount_type = Column(String, default="fixed") # 'fixed' or 'percentage'
     paid_amount = Column(Float, default=0.0)  # Amount paid for this purchase
     payment_status = Column(String, default="unpaid")  # 'unpaid', 'partial', 'paid'
     items = relationship("PurchaseItem", back_populates="purchase")
@@ -56,6 +63,8 @@ class PurchaseItem(Base):
     medicine_id = Column(Integer, ForeignKey("medicines.id"))
     quantity = Column(Integer)
     price_at_purchase = Column(Float)
+    expiry_date = Column(Date) # Added expiry_date to PurchaseItem
+    selling_price = Column(Float) # Added selling_price to history
     purchase = relationship("Purchase", back_populates="items")
     medicine = relationship("Medicine")
 
@@ -70,6 +79,8 @@ class Sale(Base):
     total_amount = Column(Float, default=0.0)
     amount_paid = Column(Float, default=0.0)
     due_amount = Column(Float, default=0.0)
+    discount_amount = Column(Float, default=0.0) # Added discount
+    discount_type = Column(String, default="fixed") # Added discount type
     
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
 
@@ -81,6 +92,8 @@ class SaleItem(Base):
     medicine_id = Column(Integer, ForeignKey("medicines.id"))
     quantity = Column(Integer)
     price_at_sale = Column(Float)
+    discount_amount = Column(Float, default=0.0)
+    discount_type = Column(String, default="fixed")
     sale = relationship("Sale", back_populates="items")
     medicine = relationship("Medicine")
 

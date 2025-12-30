@@ -18,7 +18,15 @@ def create_investment(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
     return crud.create_investment(db=db, investment=investment, user_id=current_user.id)
 
-@router.get("/investments/", response_model=List[schemas.Investment])
+@router.get("/investments/", response_model=schemas.PaginatedResponse[schemas.Investment])
 def read_investments(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    investments = crud.get_investments(db, skip=skip, limit=limit)
-    return investments
+    data = crud.get_investments(db, skip=skip, limit=limit)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }

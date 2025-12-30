@@ -17,10 +17,18 @@ def create_unit(unit: schemas.UnitCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Unit with this name already registered")
     return crud.create_unit(db=db, unit=unit)
 
-@router.get("/", response_model=List[schemas.Unit])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.Unit])
 def read_units(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    units = crud.get_units(db, skip=skip, limit=limit)
-    return units
+    data = crud.get_units(db, skip=skip, limit=limit)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
 
 @router.get("/{unit_id}", response_model=schemas.Unit)
 def read_unit(unit_id: int, db: Session = Depends(get_db)):

@@ -7,7 +7,7 @@ from ..auth import get_current_active_user
 
 router = APIRouter()
 
-@router.get("/activity-logs/", response_model=List[schemas.ActivityLog])
+@router.get("/activity-logs/", response_model=schemas.PaginatedResponse[schemas.ActivityLog])
 def read_activity_logs(
     skip: int = 0,
     limit: int = 100,
@@ -16,4 +16,13 @@ def read_activity_logs(
 ):
     if current_user.role != "superadmin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view activity logs")
-    return crud.get_activity_logs(db, skip=skip, limit=limit)
+    data = crud.get_activity_logs(db, skip=skip, limit=limit)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }

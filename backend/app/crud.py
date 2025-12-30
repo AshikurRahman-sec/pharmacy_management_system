@@ -15,7 +15,7 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 # ==================== Medicine CRUD ====================
 
@@ -29,15 +29,35 @@ def get_medicine_by_name(db: Session, name: str):
     return db.query(models.Medicine).filter(func.lower(models.Medicine.name) == name.lower()).first()
 
 
-def get_medicines(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Medicine).options(
+def get_medicines(db: Session, skip: int = 0, limit: int = 100, search: str = None, stock_status: str = None, manufacturer: str = None):
+    query = db.query(models.Medicine)
+    if search:
+        search_fmt = f"%{search}%"
+        query = query.filter(
+            or_(
+                models.Medicine.name.ilike(search_fmt),
+                models.Medicine.generic_name.ilike(search_fmt)
+            )
+        )
+    
+    if manufacturer:
+        m_fmt = f"%{manufacturer}%"
+        query = query.filter(models.Medicine.manufacturer.ilike(m_fmt))
+    
+    total = query.count()
+    items = query.options(
         joinedload(models.Medicine.batches)
     ).offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_medicine(db: Session, medicine: schemas.MedicineCreate, user_id: int = None):
     db_medicine = models.Medicine(
         name=medicine.name,
+        generic_name=medicine.generic_name,
+        manufacturer=medicine.manufacturer,
+        strength=medicine.strength,
+        medicine_type=medicine.medicine_type,
         stock_quantity=0,
         purchase_price=medicine.purchase_price,
         selling_price=medicine.selling_price
@@ -80,7 +100,9 @@ def get_medicine_batches(db: Session, medicine_id: Optional[int] = None, skip: i
     query = db.query(models.MedicineBatch)
     if medicine_id:
         query = query.filter(models.MedicineBatch.medicine_id == medicine_id)
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(models.MedicineBatch.expiry_date.asc()).offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_medicine_batch(db: Session, batch: schemas.MedicineBatchCreate):
@@ -129,10 +151,24 @@ def delete_medicine_batch(db: Session, batch_id: int):
 
 # ==================== Purchase CRUD ====================
 
-def get_purchases(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Purchase).options(
+def get_purchases(db: Session, skip: int = 0, limit: int = 100, search: str = None, payment_status: str = None):
+    query = db.query(models.Purchase)
+    if search:
+        search_fmt = f"%{search}%"
+        query = query.filter(
+            or_(
+                models.Purchase.invoice_number.ilike(search_fmt),
+                models.Purchase.supplier_name.ilike(search_fmt)
+            )
+        )
+    if payment_status and payment_status != 'all':
+        query = query.filter(models.Purchase.payment_status == payment_status)
+
+    total = query.count()
+    items = query.options(
         joinedload(models.Purchase.items).joinedload(models.PurchaseItem.medicine)
     ).offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_purchase(db: Session, purchase: schemas.PurchaseCreate, user_id: int = None):
@@ -167,8 +203,23 @@ def create_purchase(db: Session, purchase: schemas.PurchaseCreate, user_id: int 
 
 # ==================== Sale CRUD ====================
 
-def get_sales(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Sale).offset(skip).limit(limit).all()
+def get_sales(db: Session, skip: int = 0, limit: int = 100, filter_type: str = None, date_filter: str = None):
+    query = db.query(models.Sale)
+    
+    if filter_type == 'due':
+        query = query.filter(models.Sale.due_amount > 0)
+    elif filter_type == 'paid':
+        query = query.filter(models.Sale.due_amount == 0)
+    elif filter_type == 'today':
+        today = datetime.date.today()
+        query = query.filter(models.Sale.sale_date == today)
+        
+    if date_filter:
+        query = query.filter(models.Sale.sale_date == date_filter)
+
+    total = query.count()
+    items = query.order_by(models.Sale.sale_date.desc()).offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_sale(db: Session, sale: schemas.SaleCreate, user_id: int = None):
@@ -178,6 +229,8 @@ def create_sale(db: Session, sale: schemas.SaleCreate, user_id: int = None):
         buyer_mobile=sale.buyer_mobile,
         buyer_address=sale.buyer_address,
         amount_paid=sale.amount_paid,
+        discount_amount=sale.discount_amount,
+        discount_type=sale.discount_type,
         total_amount=0,
         due_amount=0
     )
@@ -185,7 +238,7 @@ def create_sale(db: Session, sale: schemas.SaleCreate, user_id: int = None):
     db.commit()
     db.refresh(db_sale)
 
-    total_amount = 0
+    subtotal_after_item_discounts = 0
     for item_data in sale.items:
         medicine = get_medicine(db, item_data.medicine_id)
         if not medicine or medicine.stock_quantity < item_data.quantity:
@@ -194,22 +247,39 @@ def create_sale(db: Session, sale: schemas.SaleCreate, user_id: int = None):
             raise ValueError(f"Not enough stock for medicine {item_data.medicine_id}")
 
         price_at_sale = medicine.selling_price
+        
+        # Calculate Item Discount
+        item_total_before_disc = item_data.quantity * price_at_sale
+        if item_data.discount_type == "percentage":
+            item_discount_val = item_total_before_disc * (item_data.discount_amount / 100)
+        else:
+            item_discount_val = item_data.discount_amount * item_data.quantity # Fixed is per unit usually in pharma, or total? I'll treat as per unit.
+            
+        item_final_total = max(0, item_total_before_disc - item_discount_val)
+        subtotal_after_item_discounts += item_final_total
+
         db_item = models.SaleItem(
             **item_data.dict(),
             sale_id=db_sale.id,
             price_at_sale=price_at_sale
         )
-        total_amount += item_data.quantity * price_at_sale
         db.add(db_item)
         medicine.stock_quantity -= item_data.quantity
 
-    db_sale.total_amount = total_amount
-    db_sale.due_amount = max(0, total_amount - sale.amount_paid)
+    # Calculate Global Discount on the remaining subtotal
+    if sale.discount_type == "percentage":
+        global_discount_val = subtotal_after_item_discounts * (sale.discount_amount / 100)
+    else:
+        global_discount_val = sale.discount_amount
+    
+    final_total = max(0, subtotal_after_item_discounts - global_discount_val)
+    db_sale.total_amount = final_total
+    db_sale.due_amount = max(0, final_total - sale.amount_paid)
     db.commit()
     db.refresh(db_sale)
     
     if user_id:
-        create_activity_log(db, user_id, "Created Sale", f"Sale ID: {db_sale.id}, Total: {total_amount}")
+        create_activity_log(db, user_id, "Created Sale", f"Sale ID: {db_sale.id}, Final Total: {final_total}")
         
     return db_sale
 
@@ -217,6 +287,7 @@ def create_sale(db: Session, sale: schemas.SaleCreate, user_id: int = None):
 def update_sale_payment(db: Session, sale_id: int, sale_update: schemas.SaleUpdate):
     db_sale = db.query(models.Sale).filter(models.Sale.id == sale_id).first()
     if db_sale:
+        # ADD the new payment to the previously paid amount
         db_sale.amount_paid += sale_update.amount_paid
         db_sale.due_amount = max(0, db_sale.total_amount - db_sale.amount_paid)
         db.commit()
@@ -238,8 +309,13 @@ def delete_sale(db: Session, sale_id: int):
 
 # ==================== Employee CRUD ====================
 
-def get_employees(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Employee).offset(skip).limit(limit).all()
+def get_employees(db: Session, skip: int = 0, limit: int = 100, search: str = None):
+    query = db.query(models.Employee)
+    if search:
+        query = query.filter(models.Employee.name.ilike(f"%{search}%"))
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_employee(db: Session, employee: schemas.EmployeeCreate):
@@ -271,7 +347,10 @@ def delete_employee(db: Session, employee_id: int):
 # ==================== Employee Bill CRUD ====================
 
 def get_employee_bills(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.EmployeeBill).offset(skip).limit(limit).all()
+    query = db.query(models.EmployeeBill)
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_employee_bill(db: Session, bill: schemas.EmployeeBillCreate):
@@ -285,8 +364,13 @@ def create_employee_bill(db: Session, bill: schemas.EmployeeBillCreate):
 
 # ==================== Shareholder CRUD ====================
 
-def get_shareholders(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Shareholder).offset(skip).limit(limit).all()
+def get_shareholders(db: Session, skip: int = 0, limit: int = 100, search: str = None):
+    query = db.query(models.Shareholder)
+    if search:
+        query = query.filter(models.Shareholder.name.ilike(f"%{search}%"))
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 def get_shareholder(db: Session, shareholder_id: int):
     return db.query(models.Shareholder).filter(models.Shareholder.id == shareholder_id).first()
@@ -301,7 +385,10 @@ def create_shareholder(db: Session, shareholder: schemas.ShareholderCreate):
 # ==================== Investment CRUD ====================
 
 def get_investments(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Investment).options(joinedload(models.Investment.shareholder)).offset(skip).limit(limit).all()
+    query = db.query(models.Investment)
+    total = query.count()
+    items = query.options(joinedload(models.Investment.shareholder)).offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_investment(db: Session, investment: schemas.InvestmentCreate, user_id: int = None):
@@ -368,7 +455,10 @@ def create_profit_distribution(db: Session, distribution: schemas.ProfitDistribu
     return db_dist
 
 def get_profit_distributions(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.ProfitDistribution).options(joinedload(models.ProfitDistribution.shareholder)).offset(skip).limit(limit).all()
+    query = db.query(models.ProfitDistribution)
+    total = query.count()
+    items = query.options(joinedload(models.ProfitDistribution.shareholder)).offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 # ==================== User CRUD ====================
@@ -381,8 +471,13 @@ def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
 
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
+def get_users(db: Session, skip: int = 0, limit: int = 100, search: str = None):
+    query = db.query(models.User)
+    if search:
+        query = query.filter(or_(models.User.username.ilike(f"%{search}%"), models.User.email.ilike(f"%{search}%")))
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_user(db: Session, user: schemas.UserCreate, actor_user_id: int = None):
@@ -422,7 +517,10 @@ def get_unit_by_name(db: Session, name: str):
 
 
 def get_units(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Unit).offset(skip).limit(limit).all()
+    query = db.query(models.Unit)
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_unit(db: Session, unit: schemas.UnitCreate):
@@ -453,8 +551,13 @@ def delete_unit(db: Session, unit_id: int):
 
 # ==================== Expense CRUD ====================
 
-def get_expenses(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Expense).offset(skip).limit(limit).all()
+def get_expenses(db: Session, skip: int = 0, limit: int = 100, search: str = None):
+    query = db.query(models.Expense)
+    if search:
+        query = query.filter(or_(models.Expense.description.ilike(f"%{search}%"), models.Expense.category.ilike(f"%{search}%")))
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"items": items, "total": total}
 
 
 def create_expense(db: Session, expense: schemas.ExpenseCreate):
@@ -488,4 +591,7 @@ def create_activity_log(db: Session, user_id: int, action: str, details: str = N
     return db_log
 
 def get_activity_logs(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.ActivityLog).order_by(models.ActivityLog.timestamp.desc()).offset(skip).limit(limit).all()
+    query = db.query(models.ActivityLog)
+    total = query.count()
+    items = query.order_by(models.ActivityLog.timestamp.desc()).offset(skip).limit(limit).all()
+    return {"items": items, "total": total}

@@ -20,9 +20,30 @@ def create_medicine(
     return crud.create_medicine(db=db, medicine=medicine, user_id=current_user.id)
 
 
-@router.get("/medicines/", response_model=List[schemas.Medicine])
-def read_medicines(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
-    return crud.get_medicines(db, skip=skip, limit=limit)
+@router.get("/medicines/", response_model=schemas.PaginatedResponse[schemas.Medicine])
+def read_medicines(skip: int = 0, limit: int = 1000, search: str = None, stock_status: str = None, manufacturer: str = None, db: Session = Depends(get_db)):
+    data = crud.get_medicines(db, skip=skip, limit=limit, search=search, stock_status=stock_status, manufacturer=manufacturer)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
+
+
+@router.get("/medicines/generic-names", response_model=List[str])
+def get_generic_names(db: Session = Depends(get_db)):
+    names = db.query(models.Medicine.generic_name).filter(models.Medicine.generic_name != None).distinct().all()
+    return [name[0] for name in names if name[0]]
+
+
+@router.get("/medicines/manufacturers", response_model=List[str])
+def get_manufacturers(db: Session = Depends(get_db)):
+    names = db.query(models.Medicine.manufacturer).filter(models.Medicine.manufacturer != None).distinct().all()
+    return [name[0] for name in names if name[0]]
 
 
 @router.get("/medicines/{medicine_id}", response_model=schemas.Medicine)
@@ -89,7 +110,7 @@ def create_medicine_batch(
     return crud.create_medicine_batch(db=db, batch=batch)
 
 
-@router.get("/medicines/{medicine_id}/batches/", response_model=List[schemas.MedicineBatch])
+@router.get("/medicines/{medicine_id}/batches/", response_model=schemas.PaginatedResponse[schemas.MedicineBatch])
 def read_medicine_batches(
     medicine_id: int,
     skip: int = 0,
@@ -100,7 +121,16 @@ def read_medicine_batches(
     db_medicine = crud.get_medicine(db, medicine_id=medicine_id)
     if db_medicine is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Medicine not found")
-    return crud.get_medicine_batches(db, medicine_id=medicine_id, skip=skip, limit=limit)
+    data = crud.get_medicine_batches(db, medicine_id=medicine_id, skip=skip, limit=limit)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
 
 
 @router.get("/medicines/{medicine_id}/batches/{batch_id}", response_model=schemas.MedicineBatch)

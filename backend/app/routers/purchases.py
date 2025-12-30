@@ -21,15 +21,39 @@ def create_purchase(
 ):
     return crud.create_purchase(db=db, purchase=purchase, user_id=current_user.id)
 
-@router.get("/purchases/", response_model=List[schemas.Purchase])
+@router.get("/purchases/", response_model=schemas.PaginatedResponse[schemas.Purchase])
 def read_purchases(
     skip: int = 0, 
     limit: int = 100, 
+    search: str = None,
+    payment_status: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    purchases = crud.get_purchases(db, skip=skip, limit=limit)
-    return purchases
+    data = crud.get_purchases(db, skip=skip, limit=limit, search=search, payment_status=payment_status)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
+
+@router.get("/purchases/{purchase_id}", response_model=schemas.Purchase)
+def read_purchase(
+    purchase_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    from sqlalchemy.orm import joinedload
+    db_purchase = db.query(models.Purchase).options(
+        joinedload(models.Purchase.items).joinedload(models.PurchaseItem.medicine)
+    ).filter(models.Purchase.id == purchase_id).first()
+    if not db_purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    return db_purchase
 
 @router.put("/purchases/{purchase_id}/paid", response_model=schemas.Purchase)
 def update_paid_amount(
@@ -46,7 +70,8 @@ def update_paid_amount(
     if not db_purchase:
         raise HTTPException(status_code=404, detail="Purchase not found")
     
-    db_purchase.paid_amount = data.paid_amount
+    # ADD the new payment to existing paid_amount
+    db_purchase.paid_amount += data.paid_amount
     
     # Update payment status
     net_amount = db_purchase.total_amount - (db_purchase.invoice_discount or 0)

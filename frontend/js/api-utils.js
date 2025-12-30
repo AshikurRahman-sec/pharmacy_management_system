@@ -1,19 +1,14 @@
 const API_URL = "/api";
 
 async function fetchData(url, method = "GET", body = null) {
-    console.log(`fetchData: Initiating request to ${url} with method ${method}`);
     try {
         let response = await fetchWithAuth(url, method, body);
-        console.log(`fetchData: Received response status ${response.status} from ${url}`);
 
         if (response.status === 401) {
-            console.log("fetchData: 401 Unauthorized, attempting token refresh.");
             const newAccessToken = await refreshToken();
             if (newAccessToken) {
-                console.log("fetchData: Token refreshed, retrying original request.");
                 response = await fetchWithAuth(url, method, body);
             } else {
-                console.error("fetchData: Token refresh failed, redirecting to login.");
                 window.location.href = "login.html";
                 return;
             }
@@ -24,7 +19,6 @@ async function fetchData(url, method = "GET", body = null) {
             console.error(`fetchData: HTTP error ${response.status} for ${url}`, errorData);
             throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
         }
-        console.log(`fetchData: Request to ${url} successful.`);
         return response.json();
     } catch (error) {
         console.error(`fetchData: Error during request to ${url}:`, error);
@@ -43,25 +37,19 @@ async function fetchWithAuth(url, method, body) {
     const token = localStorage.getItem("accessToken");
     if (token) {
         options.headers["Authorization"] = `Bearer ${token}`;
-        console.log("fetchWithAuth: Access token found and added to headers.");
-    } else {
-        console.warn("fetchWithAuth: No access token found in localStorage.");
     }
 
     if (body) {
         options.body = JSON.stringify(body);
     }
 
-    // Prepend API_URL if url doesn't start with http
     const fullUrl = url.startsWith('http') ? url : `${API_URL}/${url}`;
     return await fetch(fullUrl, options);
 }
 
 async function refreshToken() {
-    console.log("refreshToken: Attempting to refresh token.");
     const refreshToken = localStorage.getItem("refreshToken");
     if (!refreshToken) {
-        console.error("refreshToken: No refresh token found.");
         return null;
     }
 
@@ -75,12 +63,10 @@ async function refreshToken() {
 
     if (response.ok) {
         const data = await response.json();
-        console.log("refreshToken: Token refresh successful.", data);
         localStorage.setItem("accessToken", data.access_token);
         localStorage.setItem("refreshToken", data.refresh_token);
         return data.access_token;
     } else {
-        console.error("refreshToken: Token refresh failed.", response);
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         return null;
@@ -88,28 +74,12 @@ async function refreshToken() {
 }
 
 function logout() {
-    console.log("Logout function called.");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("username");
     window.location.href = "login.html";
 }
-
-function checkAuth() {
-    const accessToken = localStorage.getItem('accessToken');
-    const path = window.location.pathname;
-    const isLoginPage = path.includes('login.html');
-
-    if (!accessToken && !isLoginPage) {
-        // Only redirect if we are not already on the login page
-        // and not on a root path that might be serving the login page (though usually root is index)
-        window.location.href = 'login.html';
-    } else if (accessToken && isLoginPage) {
-        window.location.href = 'index.html';
-    }
-}
-
-// Run checkAuth immediately
-// checkAuth(); // Disabled in favor of inline scripts in HTML files
 
 document.addEventListener("DOMContentLoaded", function() {
     const logoutButton = document.getElementById("logout-button");
@@ -118,6 +88,77 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+function renderPagination(currentPage, totalPages, elementId, onPageClick) {
+    const paginationEl = document.getElementById(elementId);
+    if (!paginationEl) return;
+
+    paginationEl.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    const prevLi = document.createElement("li");
+    prevLi.className = `page-item ${currentPage === 1 ? "disabled" : ""}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+    prevLi.onclick = (e) => {
+        e.preventDefault();
+        if (currentPage > 1) onPageClick(currentPage - 1);
+    };
+    paginationEl.appendChild(prevLi);
+
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+    
+    if (startPage > 1) {
+         const firstLi = document.createElement("li");
+         firstLi.className = "page-item";
+         firstLi.innerHTML = `<a class="page-link" href="#">1</a>`;
+         firstLi.onclick = (e) => { e.preventDefault(); onPageClick(1); };
+         paginationEl.appendChild(firstLi);
+         
+         if (startPage > 2) {
+             const dots = document.createElement("li");
+             dots.className = "page-item disabled";
+             dots.innerHTML = `<span class="page-link">...</span>`;
+             paginationEl.appendChild(dots);
+         }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const li = document.createElement("li");
+        li.className = `page-item ${i === currentPage ? "active" : ""}`;
+        li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+        li.onclick = (e) => {
+            e.preventDefault();
+            onPageClick(i);
+        };
+        paginationEl.appendChild(li);
+    }
+    
+    if (endPage < totalPages) {
+         if (endPage < totalPages - 1) {
+             const dots = document.createElement("li");
+             dots.className = "page-item disabled";
+             dots.innerHTML = `<span class="page-link">...</span>`;
+             paginationEl.appendChild(dots);
+         }
+         
+         const lastLi = document.createElement("li");
+         lastLi.className = "page-item";
+         lastLi.innerHTML = `<a class="page-link" href="#">${totalPages}</a>`;
+         lastLi.onclick = (e) => { e.preventDefault(); onPageClick(totalPages); };
+         paginationEl.appendChild(lastLi);
+    }
+
+    const nextLi = document.createElement("li");
+    nextLi.className = `page-item ${currentPage === totalPages ? "disabled" : ""}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+    nextLi.onclick = (e) => {
+        e.preventDefault();
+        if (currentPage < totalPages) onPageClick(currentPage + 1);
+    };
+    paginationEl.appendChild(nextLi);
+}
+
 window.fetchData = fetchData;
-// window.checkAuth = checkAuth;
 window.logout = logout;
+window.renderPagination = renderPagination;

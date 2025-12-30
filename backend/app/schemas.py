@@ -1,6 +1,15 @@
 from pydantic import BaseModel, validator
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Optional, Generic, TypeVar
+
+T = TypeVar('T')
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    size: int
+    pages: int
 
 # Unit Schemas
 class UnitBase(BaseModel):
@@ -13,7 +22,7 @@ class Unit(UnitBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Medicine Batch Schemas
 class MedicineBatchBase(BaseModel):
@@ -22,10 +31,12 @@ class MedicineBatchBase(BaseModel):
     batch_quantity: int
     unit_id: int # Changed from 'unit: str' to 'unit_id: int'
     per_product_discount: float
+    discount_type: Optional[str] = "fixed" # 'fixed' or 'percentage'
     invoice_number: str
     expiry_date: date
     purchase_date: Optional[date] = None
     total_batch_discount: float
+    selling_price: Optional[float] = 0.0 # Added selling_price
 
 class MedicineBatchCreate(MedicineBatchBase):
     pass
@@ -34,12 +45,20 @@ class MedicineBatch(MedicineBatchBase):
     id: int
     unit: Unit # Add unit relationship
 
+    @validator('discount_type', pre=True, always=True)
+    def set_discount_type_default(cls, v):
+        return v if v is not None else "fixed"
+
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Medicine Schemas
 class MedicineBase(BaseModel):
     name: str
+    generic_name: Optional[str] = None
+    manufacturer: Optional[str] = None
+    strength: Optional[str] = None
+    medicine_type: Optional[str] = None
     purchase_price: float
     selling_price: float
 
@@ -53,12 +72,16 @@ class Medicine(MedicineBase):
     batches: List[MedicineBatch] = [] # Forward reference for type hinting
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Unified Purchase Schema for Invoice-based entry
 class PurchaseInvoiceItem(BaseModel):
     # For new medicine
     medicine_name: Optional[str] = None
+    generic_name: Optional[str] = None
+    manufacturer: Optional[str] = None
+    strength: Optional[str] = None
+    medicine_type: Optional[str] = None
     
     # For existing medicine
     medicine_id: Optional[int] = None
@@ -68,9 +91,9 @@ class PurchaseInvoiceItem(BaseModel):
     expiry_date: date
     medicine_purchase_price: float
     medicine_selling_price: float
-    
     # Discounts (calculated on frontend)
     per_product_discount: float = 0.0
+    discount_type: str = "fixed"
     total_batch_discount: float = 0.0
 
 class PurchaseInvoiceCreate(BaseModel):
@@ -78,6 +101,7 @@ class PurchaseInvoiceCreate(BaseModel):
     invoice_number: str
     purchase_date: date
     invoice_discount: float = 0.0
+    discount_type: str = "fixed"
     paid_amount: float = 0.0
     items: List[PurchaseInvoiceItem]
 
@@ -87,6 +111,8 @@ class PurchaseItemBase(BaseModel):
     medicine_id: int
     quantity: int
     price_at_purchase: float
+    expiry_date: Optional[date] = None # Added expiry_date
+    selling_price: Optional[float] = 0.0 # Added selling_price
 
 class PurchaseItemCreate(PurchaseItemBase):
     pass
@@ -96,7 +122,7 @@ class PurchaseItem(PurchaseItemBase):
     medicine: Medicine
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PurchaseBase(BaseModel):
     supplier_name: str
@@ -104,6 +130,7 @@ class PurchaseBase(BaseModel):
     purchase_date: date
     total_amount: float = 0.0
     invoice_discount: float = 0.0
+    discount_type: Optional[str] = "fixed"
     paid_amount: float = 0.0
     payment_status: str = "unpaid"
 
@@ -118,17 +145,23 @@ class Purchase(PurchaseBase):
     def set_float_defaults(cls, v):
         return v if v is not None else 0.0
 
+    @validator('discount_type', pre=True, always=True)
+    def set_discount_type_default(cls, v):
+        return v if v is not None else "fixed"
+
     @validator('payment_status', pre=True, always=True)
     def set_payment_status(cls, v):
         return v if v is not None else "unpaid"
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Sale Schemas
 class SaleItemBase(BaseModel):
     medicine_id: int
     quantity: int
+    discount_amount: float = 0.0
+    discount_type: str = "fixed"
 
 class SaleItemCreate(SaleItemBase):
     pass
@@ -139,7 +172,7 @@ class SaleItem(SaleItemBase):
     medicine: Medicine
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class SaleBase(BaseModel):
     sale_date: date
@@ -147,6 +180,8 @@ class SaleBase(BaseModel):
     buyer_mobile: Optional[str] = None
     buyer_address: Optional[str] = None
     amount_paid: float = 0.0
+    discount_amount: float = 0.0 # Added discount
+    discount_type: str = "fixed" # Added discount type
 
 class SaleCreate(SaleBase):
     items: List[SaleItemCreate]
@@ -161,7 +196,7 @@ class Sale(SaleBase):
     items: List[SaleItem] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Shareholder Schemas
 class ShareholderBase(BaseModel):
@@ -180,7 +215,7 @@ class Shareholder(ShareholderBase):
     share_percentage: float = 0.0 # Calculated field
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Investment Schemas
 class InvestmentBase(BaseModel):
@@ -198,7 +233,7 @@ class Investment(InvestmentBase):
     shareholder: Optional[Shareholder] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Profit Distribution Schemas
 class ProfitDistributionBase(BaseModel):
@@ -215,7 +250,7 @@ class ProfitDistribution(ProfitDistributionBase):
     shareholder: Shareholder
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # User Schemas
 class UserBase(BaseModel):
@@ -232,7 +267,7 @@ class User(UserBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Employee Schemas
 class EmployeeBase(BaseModel):
@@ -254,7 +289,7 @@ class Employee(EmployeeBase):
         return v if v is not None else 0.0
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EmployeeBillBase(BaseModel):
     employee_id: int
@@ -271,7 +306,7 @@ class EmployeeBill(EmployeeBillBase):
     employee: Employee
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Expense Schemas
 class ExpenseBase(BaseModel):
@@ -287,7 +322,7 @@ class Expense(ExpenseBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Supplier Schemas
@@ -307,7 +342,7 @@ class Supplier(SupplierBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Activity Log Schemas
 class ActivityLogBase(BaseModel):
@@ -324,4 +359,4 @@ class ActivityLog(ActivityLogBase):
     user: Optional[UserBase] = None  # Use UserBase to avoid circular dependency if possible, or just minimal info
 
     class Config:
-        orm_mode = True
+        from_attributes = True

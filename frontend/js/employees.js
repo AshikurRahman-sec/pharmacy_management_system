@@ -1,6 +1,4 @@
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("employees.js: DOMContentLoaded fired.");
-
     const employeesTableBody = document.getElementById('employees-table-body');
     const employeeBillsTableBody = document.getElementById('employee-bills-table-body');
     const addEmployeeForm = document.getElementById('add-employee-form');
@@ -11,21 +9,19 @@ document.addEventListener("DOMContentLoaded", function() {
     const updateLinkUserSelect = document.getElementById('update_link_user_id');
 
     let allUsers = [];
+    const pageSize = 10;
 
     async function loadUsers() {
         try {
-            const users = await fetchData('users/');
+            const response = await fetchData('users/?limit=1000');
+            const users = response.items ? response.items : response;
             allUsers = users;
             populateUserDropdowns(users);
-        } catch (error) {
-            console.error('Error loading users:', error);
-        }
+        } catch (error) {}
     }
 
     function populateUserDropdowns(users) {
-        // Filter to only 'employee' role as per requirements
         const employeeUsers = users.filter(u => u.role === 'employee');
-        
         const options = '<option value="">Choose User...</option>' + 
             employeeUsers.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
         
@@ -39,32 +35,28 @@ document.addEventListener("DOMContentLoaded", function() {
             if (selectedUserId) {
                 const user = allUsers.find(u => u.id == selectedUserId);
                 if (user && !document.getElementById('employee_name').value) {
-                    // Pre-fill name if it's empty
                     document.getElementById('employee_name').value = user.username;
                 }
             }
         });
     }
 
-    async function loadEmployees() {
+    async function loadEmployees(page = 1) {
         if (!employeesTableBody && !billEmployeeSelect) return;
-        
         try {
-            const employees = await fetchData('employees/');
-            
-            if (employeesTableBody) {
-                employeesTableBody.innerHTML = '';
-            }
-            
-            if (billEmployeeSelect) {
-                billEmployeeSelect.innerHTML = '<option value="">Select an employee</option>';
-            }
+            const skip = (page - 1) * pageSize;
+            const response = await fetchData(`employees/?skip=${skip}&limit=${pageSize}`);
+            const employees = response.items ? response.items : response;
+
+            if (employeesTableBody) employeesTableBody.innerHTML = '';
+            if (billEmployeeSelect) billEmployeeSelect.innerHTML = '<option value="">Select an employee</option>';
 
             employees.forEach((employee, index) => {
                 if (employeesTableBody) {
+                    const sn = (response.page - 1) * pageSize + index + 1;
                     const linkedUser = employee.user ? `<br><small class="text-muted">User: ${employee.user.username}</small>` : '';
-                    const row = `<tr>
-                        <th scope="row">${index + 1}</th>
+                    employeesTableBody.innerHTML += `<tr>
+                        <th scope="row">${sn}</th>
                         <td>${employee.name}${linkedUser}</td>
                         <td>${employee.role}</td>
                         <td>${employee.base_salary.toFixed(2)} ৳ <br><small class="text-muted">OT: ${employee.overtime_rate.toFixed(2)}/hr</small></td>
@@ -73,76 +65,61 @@ document.addEventListener("DOMContentLoaded", function() {
                             <button class="btn btn-sm btn-danger" onclick="deleteEmployee(${employee.id})">Delete</button>
                         </td>
                     </tr>`;
-                    employeesTableBody.innerHTML += row;
                 }
-
                 if (billEmployeeSelect) {
-                    const option = `<option value="${employee.id}">${employee.name}</option>`;
-                    billEmployeeSelect.innerHTML += option;
+                    billEmployeeSelect.innerHTML += `<option value="${employee.id}">${employee.name}</option>`;
                 }
             });
+
+            if (response.pages) renderPagination(response.page, response.pages, "employees-pagination", loadEmployees);
         } catch (error) {
-            console.error('Error loading employees:', error);
-            if (employeesTableBody) {
-                employeesTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${error.message}</td></tr>`;
-            }
+            if (employeesTableBody) employeesTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${error.message}</td></tr>`;
         }
     }
 
-    async function loadEmployeeBills() {
+    async function loadEmployeeBills(page = 1) {
         if (!employeeBillsTableBody) return;
-        
         try {
-            const bills = await fetchData('employee-bills/');
+            const skip = (page - 1) * pageSize;
+            const response = await fetchData(`employee-bills/?skip=${skip}&limit=${pageSize}`);
+            const bills = response.items ? response.items : response;
+
             employeeBillsTableBody.innerHTML = '';
             bills.forEach((bill, index) => {
-                const row = `<tr>
-                    <th scope="row">${index + 1}</th>
+                const sn = (response.page - 1) * pageSize + index + 1;
+                employeeBillsTableBody.innerHTML += `<tr>
+                    <th scope="row">${sn}</th>
                     <td>${bill.employee.name}</td>
                     <td>${new Date(bill.payment_date).toLocaleDateString()}</td>
                     <td>${bill.base_amount}</td>
                     <td>${bill.overtime_amount}</td>
                     <td>${bill.total_amount}</td>
                 </tr>`;
-                employeeBillsTableBody.innerHTML += row;
             });
+
+            if (response.pages) renderPagination(response.page, response.pages, "payroll-pagination", loadEmployeeBills);
         } catch (error) {
-            console.error('Error loading employee bills:', error);
-            if (employeeBillsTableBody) {
-                employeeBillsTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${error.message}</td></tr>`;
-            }
+            if (employeeBillsTableBody) employeeBillsTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${error.message}</td></tr>`;
         }
     }
 
     if (addEmployeeForm) {
         addEmployeeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const linkUserId = document.getElementById('link_user_id').value;
             const formData = {
                 name: document.getElementById('employee_name').value,
                 role: document.getElementById('employee_role').value,
                 base_salary: parseFloat(document.getElementById('base_salary').value),
                 overtime_rate: parseFloat(document.getElementById('overtime_rate').value) || 0,
-                user_id: linkUserId ? parseInt(linkUserId) : null
+                user_id: document.getElementById('link_user_id').value ? parseInt(document.getElementById('link_user_id').value) : null
             };
-
             try {
                 await fetchData('employees/', 'POST', formData);
                 addEmployeeForm.reset();
-                // Hide the collapse form after submission
-                const collapseElement = document.getElementById('collapseAddEmployeeForm');
-                if (collapseElement) {
-                    const bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
-                    if (bsCollapse) {
-                        bsCollapse.hide();
-                    }
-                }
-                await loadEmployees(); // Refresh employee list
-                alert('Employee added successfully!');
-            } catch (error) {
-                console.error('Error adding employee:', error);
-                alert(`Error adding employee: ${error.message}`);
-            }
+                bootstrap.Collapse.getInstance(document.getElementById('collapseAddEmployeeForm'))?.hide();
+                await loadEmployees(1);
+                alert('Success!');
+            } catch (error) { alert(`Error: ${error.message}`); }
         });
     }
 
@@ -153,40 +130,26 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('update_base_salary').value = baseSalary;
         document.getElementById('update_overtime_rate').value = overtimeRate;
         document.getElementById('update_link_user_id').value = userId || "";
-        
-        const updateModal = new bootstrap.Modal(document.getElementById('updateEmployeeModal'));
-        updateModal.show();
+        new bootstrap.Modal(document.getElementById('updateEmployeeModal')).show();
     };
 
     if (updateEmployeeForm) {
         updateEmployeeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const employeeId = document.getElementById('update_employee_id').value;
-            const linkUserId = document.getElementById('update_link_user_id').value;
+            const id = document.getElementById('update_employee_id').value;
             const formData = {
                 name: document.getElementById('update_employee_name').value,
                 role: document.getElementById('update_employee_role').value,
                 base_salary: parseFloat(document.getElementById('update_base_salary').value),
                 overtime_rate: parseFloat(document.getElementById('update_overtime_rate').value) || 0,
-                user_id: linkUserId ? parseInt(linkUserId) : null
+                user_id: document.getElementById('update_link_user_id').value ? parseInt(document.getElementById('update_link_user_id').value) : null
             };
-
             try {
-                await fetchData(`employees/${employeeId}`, 'PUT', formData);
-                
-                // Hide modal
-                const updateModalElement = document.getElementById('updateEmployeeModal');
-                const modalInstance = bootstrap.Modal.getInstance(updateModalElement);
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
-                
-                await loadEmployees();
-                alert('Employee updated successfully!');
-            } catch (error) {
-                console.error('Error updating employee:', error);
-                alert(`Error updating employee: ${error.message}`);
-            }
+                await fetchData(`employees/${id}`, 'PUT', formData);
+                bootstrap.Modal.getInstance(document.getElementById('updateEmployeeModal'))?.hide();
+                await loadEmployees(1);
+                alert('Updated!');
+            } catch (error) { alert(`Error: ${error.message}`); }
         });
     }
 
@@ -199,50 +162,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 base_amount: parseFloat(document.getElementById('base_amount').value),
                 overtime_amount: parseFloat(document.getElementById('overtime_amount').value)
             };
-
             try {
                 await fetchData('employee-bills/', 'POST', formData);
                 addEmployeeBillForm.reset();
-                // Hide the collapse form after submission
-                const collapseElement = document.getElementById('collapsePayEmployeeSalaryForm');
-                const bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
-                if (bsCollapse) {
-                    bsCollapse.hide();
-                }
-                await loadEmployeeBills(); // Refresh bill list
-                alert('Salary paid successfully!');
-            } catch (error) {
-                console.error('Error paying salary:', error);
-                alert(`Error paying salary: ${error.message}`);
-            }
+                bootstrap.Collapse.getInstance(document.getElementById('collapsePaySalaryForm'))?.hide();
+                await loadEmployeeBills(1);
+                alert('Paid!');
+            } catch (error) { alert(`Error: ${error.message}`); }
         });
     }
 
-    window.deleteEmployee = async function(employeeId) {
-        if (!confirm('Are you sure you want to delete this employee?')) {
-            return;
-        }
-
-        try {
-            await fetchData(`employees/${employeeId}`, 'DELETE');
-            await loadEmployees();
-            alert('Employee deleted successfully!');
-        } catch (error) {
-            console.error('Error deleting employee:', error);
-            alert(`Error deleting employee: ${error.message}`);
+    window.deleteEmployee = async function(id) {
+        if (confirm('Are you sure?')) {
+            await fetchData(`employees/${id}`, 'DELETE');
+            await loadEmployees(1);
         }
     };
 
-    // Initial data load
-    loadUsers();
-    loadEmployees();
-    loadEmployeeBills();
-
-    // Hide loader after initial load
-    const loaderWrapper = document.getElementById("loader-wrapper");
-    if (loaderWrapper) {
-        setTimeout(() => {
-            loaderWrapper.classList.remove("visible");
-        }, 500);
-    }
+    loadUsers(); loadEmployees(); loadEmployeeBills();
+    setTimeout(() => document.getElementById("loader-wrapper")?.classList.remove("visible"), 500);
 });

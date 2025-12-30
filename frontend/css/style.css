@@ -785,11 +785,17 @@ body[data-user-role="customer"] #nav-activity-logs {
     cursor: pointer;
     transition: all 0.2s;
     border: 1px solid transparent;
+    background-color: #fff;
+    color: #334155;
 }
 
 .suggestion-item:hover {
-    background-color: #f8fafc;
+    background-color: #f1f5f9;
     border-color: #e2e8f0;
+}
+
+.suggestion-item strong {
+    color: #2563eb;
 }
 
 .suggestion-item.active {

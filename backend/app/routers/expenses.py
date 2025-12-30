@@ -18,15 +18,24 @@ def create_expense(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to record expenses")
     return crud.create_expense(db=db, expense=expense)
 
-@router.get("/expenses/", response_model=List[schemas.Expense])
+@router.get("/expenses/", response_model=schemas.PaginatedResponse[schemas.Expense])
 def read_expenses(
     skip: int = 0,
     limit: int = 100,
+    search: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    expenses = crud.get_expenses(db, skip=skip, limit=limit)
-    return expenses
+    data = crud.get_expenses(db, skip=skip, limit=limit, search=search)
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (data["total"] + limit - 1) // limit if limit > 0 else 1
+    return {
+        "items": data["items"],
+        "total": data["total"],
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
 
 @router.delete("/expenses/{expense_id}", response_model=schemas.Expense)
 def delete_expense(

@@ -24,14 +24,27 @@ def create_supplier(
     return db_supplier
 
 
-@router.get("/suppliers/", response_model=List[schemas.Supplier])
+@router.get("/suppliers/", response_model=schemas.PaginatedResponse[schemas.Supplier])
 def read_suppliers(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    return db.query(models.Supplier).offset(skip).limit(limit).all()
+    query = db.query(models.Supplier)
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    
+    page = (skip // limit) + 1 if limit > 0 else 1
+    total_pages = (total + limit - 1) // limit if limit > 0 else 1
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": limit,
+        "pages": total_pages
+    }
 
 
 @router.get("/suppliers/{supplier_id}", response_model=schemas.Supplier)

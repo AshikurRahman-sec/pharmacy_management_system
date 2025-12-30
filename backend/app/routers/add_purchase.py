@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import date
 from .. import crud, schemas, models
 from ..dependencies import get_db
 from ..auth import get_current_active_user
@@ -8,6 +9,44 @@ router = APIRouter(
     prefix="/add_purchase",
     tags=["add_purchase"],
 )
+
+
+@router.get("/next_invoice_number")
+def get_next_invoice_number(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    today = date.today()
+    # Format: YYYY-MM-
+    prefix = f"{today.year}-{today.month:02d}-"
+    
+    # Get all invoices starting with this prefix
+    purchases = db.query(models.Purchase).filter(
+        models.Purchase.invoice_number.like(f"{prefix}%")
+    ).all()
+    
+    if not purchases:
+        next_seq = 0
+    else:
+        max_seq = 0
+        for p in purchases:
+            try:
+                if not p.invoice_number:
+                    continue
+                # Extract the part after the prefix
+                part = p.invoice_number[len(prefix):]
+                if part.isdigit():
+                    seq = int(part)
+                    if seq > max_seq:
+                        max_seq = seq
+            except ValueError:
+                continue
+        next_seq = max_seq + 1
+    
+    # Padded to at least 2 digits (e.g., 00, 01)
+    invoice_number = f"{prefix}{next_seq:02d}"
+    
+    return {"invoice_number": invoice_number}
 
 
 @router.get("/check/{invoice_number}")
@@ -54,6 +93,7 @@ def create_purchase_invoice(
             purchase_date=invoice.purchase_date,
             total_amount=0,
             invoice_discount=invoice.invoice_discount,
+            discount_type=invoice.discount_type,
             paid_amount=invoice.paid_amount,
             payment_status="unpaid"
         )
@@ -62,6 +102,7 @@ def create_purchase_invoice(
         db.refresh(db_purchase)
     else:
         db_purchase.invoice_discount = invoice.invoice_discount
+        db_purchase.discount_type = invoice.discount_type
         db_purchase.paid_amount = invoice.paid_amount
 
     total_invoice_amount = db_purchase.total_amount
@@ -76,11 +117,19 @@ def create_purchase_invoice(
                 medicine_id = medicine_in_db.id
                 medicine_in_db.purchase_price = item.medicine_purchase_price
                 medicine_in_db.selling_price = item.medicine_selling_price
+                medicine_in_db.generic_name = item.generic_name
+                medicine_in_db.manufacturer = item.manufacturer
+                medicine_in_db.strength = item.strength
+                medicine_in_db.medicine_type = item.medicine_type
             else:
                 new_medicine_data = schemas.MedicineCreate(
                     name=item.medicine_name,
+                    generic_name=item.generic_name,
+                    manufacturer=item.manufacturer,
+                    strength=item.strength,
+                    medicine_type=item.medicine_type,
                     purchase_price=item.medicine_purchase_price,
-                    selling_price=item.medicine_selling_price,
+                    selling_price=item.medicine_selling_price
                 )
                 medicine = crud.create_medicine(db=db, medicine=new_medicine_data)
                 medicine_id = medicine.id
@@ -89,6 +138,11 @@ def create_purchase_invoice(
             if medicine_in_db:
                 medicine_in_db.purchase_price = item.medicine_purchase_price
                 medicine_in_db.selling_price = item.medicine_selling_price
+                # Update existing medicine details if provided
+                if item.generic_name: medicine_in_db.generic_name = item.generic_name
+                if item.manufacturer: medicine_in_db.manufacturer = item.manufacturer
+                if item.strength: medicine_in_db.strength = item.strength
+                if item.medicine_type: medicine_in_db.medicine_type = item.medicine_type
 
         # Create Medicine Batch
         batch_data = schemas.MedicineBatchCreate(
@@ -97,10 +151,12 @@ def create_purchase_invoice(
             batch_quantity=item.quantity,
             unit_id=item.unit_id,
             per_product_discount=item.per_product_discount,
+            discount_type=item.discount_type,
             invoice_number=invoice.invoice_number,
             expiry_date=item.expiry_date,
             purchase_date=invoice.purchase_date,
             total_batch_discount=item.total_batch_discount,
+            selling_price=item.medicine_selling_price # Saving selling price to batch
         )
         crud.create_medicine_batch(db=db, batch=batch_data)
 
@@ -109,7 +165,9 @@ def create_purchase_invoice(
             purchase_id=db_purchase.id,
             medicine_id=medicine_id,
             quantity=item.quantity,
-            price_at_purchase=item.medicine_purchase_price
+            price_at_purchase=item.medicine_purchase_price,
+            expiry_date=item.expiry_date,
+            selling_price=item.medicine_selling_price # Saving selling price to history
         )
         db.add(db_item)
         total_invoice_amount += (item.quantity * item.medicine_purchase_price)
